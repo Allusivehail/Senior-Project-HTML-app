@@ -1,1 +1,199 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>System Control Dashboard</title>
 
+    <style>
+        body {
+            font-family: Arial;
+            margin: 20px;
+            background: #f4f4f4;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        button {
+            padding: 10px;
+            margin: 5px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .motor { background: #4CAF50; color: white; }
+        .stop { background: #f44336; color: white; }
+        .blue { background: #2196F3; color: white; }
+
+        img {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+
+        pre {
+            background: #eee;
+            padding: 10px;
+            border-radius: 6px;
+            overflow-x: auto;
+        }
+
+        table {
+            font-size: 14px;
+        }
+
+        th, td {
+            padding: 6px;
+            text-align: left;
+        }
+
+        th {
+            background: #ddd;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>System Control Dashboard</h1>
+
+<div class="container">
+
+    <!-- MOTOR CONTROL -->
+    <div class="card">
+        <h2>Motor Control</h2>
+
+        <button class="motor" onclick="send('/motorfridge')">Fridge Motor</button>
+        <button class="motor" onclick="send('/motorroom')">Room Motor</button>
+        <button class="stop" onclick="send('/motorstop')">STOP</button>
+
+        <br><br>
+
+        <button class="blue" onclick="runSequence()">Run Debug Sequence</button>
+
+        <p id="status"></p>
+    </div>
+
+    <!-- CAMERA -->
+    <div class="card">
+        <h2>Camera</h2>
+
+        <button class="blue" onclick="capture()">Capture Image</button>
+        <button onclick="loadImage()">Refresh Image</button>
+
+        <br><br>
+
+        <img id="cam" src="" alt="Camera Image">
+    </div>
+
+    <!-- YOLO Detections -->
+    <div class="card">
+        <h2>YOLO Detections</h2>
+
+        <button onclick="loadJSON()">Refresh Data</button>
+
+        <div style="max-height: 300px; overflow-y: auto; margin-top: 10px;">
+            <table border="1" style="width:100%; border-collapse: collapse;">
+                <thead>
+                    <tr>
+                        <th>Class Name</th>
+                        <th>Confidence</th>
+                    </tr>
+                </thead>
+                <tbody id="yoloBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SYSTEM -->
+    <div class="card">
+        <h2>System Test</h2>
+        <button onclick="test()">Ping Server</button>
+        <p id="testOut"></p>
+    </div>
+
+</div>
+
+<script>
+
+async function send(endpoint) {
+    const res = await fetch(endpoint);
+    const text = await res.text();
+    document.getElementById("status").innerText = text;
+}
+
+async function test() {
+    const res = await fetch("/api/test");
+    const data = await res.json();
+    document.getElementById("testOut").innerText = data.message;
+}
+
+async function capture() {
+    const res = await fetch("/api/capture-image");
+    const data = await res.json();
+    document.getElementById("status").innerText = data.message;
+    loadImage();
+}
+
+function loadImage() {
+    document.getElementById("cam").src =
+        "/static/IMG/http_test_image.png?rand=" + Math.random();
+}
+
+async function runSequence() {
+    const res = await fetch("/api/run-debug", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "run_program" })
+    });
+
+    const data = await res.json();
+    document.getElementById("status").innerText = data.message;
+}
+
+async function loadJSON() {
+    try {
+        const res = await fetch("/api/get-json");
+        const data = await res.json();
+
+        const tableBody = document.getElementById("yoloBody");
+        tableBody.innerHTML = "";
+
+        data.forEach(row => {
+            const tr = document.createElement("tr");
+
+            const name = row["class name"] ?? "N/A";
+            const conf = row["confidence"] ?? "N/A";
+
+            tr.innerHTML = `
+                <td>${name}</td>
+                <td>${conf}</td>
+            `;
+
+            tableBody.appendChild(tr);
+        });
+
+    } catch (err) {
+        console.error("Failed to load YOLO JSON:", err);
+    }
+}
+
+// AUTO LOAD ON PAGE START
+window.onload = function () {
+    loadJSON();
+    loadImage();
+};
+
+</script>
+
+</body>
+</html>
