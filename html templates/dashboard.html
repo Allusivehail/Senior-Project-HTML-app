@@ -1,1 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 20px;
+            background: #f4f4f4;
+        }
 
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        button {
+            padding: 10px;
+            margin: 5px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .motor { background: #4CAF50; color: white; }
+        .stop { background: #f44336; color: white; }
+        .blue { background: #2196F3; color: white; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 6px;
+            border: 1px solid #ccc;
+        }
+
+        td[contenteditable="true"] {
+            background: #f9f9f9;
+        }
+
+        .delete-btn {
+            background: red;
+            color: white;
+            border: none;
+            padding: 6px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Dashboard</h1>
+
+<!-- MENU -->
+<a href="/testing"> <button class="motor">Testing</button></a> |
+<a href="/inventory"> <button class="motor">Inventory</button></a> |
+<a href="/logs"> <button class="motor">logs</button></a>
+
+<hr>
+
+    <!-- CAMERA -->
+    <div class="card">
+        <h2>Camera</h2>
+
+        <button class="blue" onclick="captureImage()">Take Picture</button>
+        <button onclick="loadImage()">Refresh Image</button>
+
+        <p id="cameraStatus"></p>
+
+        <img id="cam" style="max-width:100%; border-radius:8px;">
+
+<script>
+function loadImage() {
+    document.getElementById("cam").src =
+        "/static/IMG/http_test_image.png?rand=" + Math.random();
+}
+
+async function captureImage() {
+    const res = await fetch("/api/capture-image");
+    const data = await res.json();
+
+    document.getElementById("cameraStatus").innerText = data.message;
+
+    loadImage();
+}
+
+window.onload = loadImage;
+</script>
+
+    </div>
+    <br> <br>
+    <div class="card">
+        <!-- SENSOR Data -->
+        <h2>Fridge Diagnostics</h2>
+        <p>Temperature: --</p>
+        <p>Humidity: --</p>
+        <p>Ethanol: --</p>
+        <p>Ammonia: --</p>
+        <p>Hydrogen fuckfide I think: --</p>
+    </div>
+
+</body>
+</html>
