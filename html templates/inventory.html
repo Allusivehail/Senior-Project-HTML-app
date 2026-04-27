@@ -57,6 +57,7 @@
             cursor: pointer;
         }
     </style>
+<meta http-equiv="refresh" content="10">
 </head>
 <body>
 
@@ -160,7 +161,7 @@ async function addRow() {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
-            Item: document.getElementById("newItem").value,
+            "Item": document.getElementById("newItem").value,
             "Date In": document.getElementById("newDate").value,
             "Expected Expiration": document.getElementById("newExp").value
         })
@@ -195,7 +196,6 @@ async function deleteRow(id) {
 // ----------------------------
 window.onload = function () {
     loadJSON();
-    loadImage();
 };
 </script>
 
