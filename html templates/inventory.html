@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>Inventory</title>
-        <style>
+    <style>
         body {
             font-family: Arial;
             margin: 20px;
@@ -57,7 +57,6 @@
             cursor: pointer;
         }
     </style>
-<meta http-equiv="refresh" content="10">
 </head>
 <body>
 
@@ -67,33 +66,35 @@
 <a href="/"> <button class="motor">Back to Home</button></a>
 
 <hr>
-    <!-- INVENTORY -->
-    <div class="card">
-        <h2>Inventory (Editable)</h2>
 
-        <h4>Add Item</h4>
-        <input id="newItem" placeholder="Item">
-        <input id="newDate" placeholder="Date In">
-        <input id="newExp" placeholder="Expiration">
-        <button class="blue" onclick="addRow()">Add</button>
+<!-- INVENTORY -->
+<div class="card">
+    <h2>Inventory (Editable)</h2>
 
-        <br><br>
+    <h4>Add Item</h4>
+    <input id="newItem" placeholder="Item">
+    <input id="newDate" placeholder="Date In">
+    <input id="newExp" placeholder="Expiration">
+    <button class="blue" onclick="addRow()">Add</button>
 
-        <div style="max-height:300px; overflow-y:auto;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Item</th>
-                        <th>Date In</th>
-                        <th>Expiration</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
+    <br><br>
 
-                <tbody id="yoloBody"></tbody>
-            </table>
-        </div>
+    <div style="max-height:300px; overflow-y:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Item</th>
+                    <th>Date In</th>
+                    <th>Expiration</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+
+            <tbody id="yoloBody"></tbody>
+        </table>
     </div>
+</div>
+
 <script>
 
 // ----------------------------
@@ -196,7 +197,11 @@ async function deleteRow(id) {
 // ----------------------------
 window.onload = function () {
     loadJSON();
+
+    // ✅ Auto refresh every 5 seconds
+    setInterval(loadJSON, 5000);
 };
+
 </script>
 
 </body>
