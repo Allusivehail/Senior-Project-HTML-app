@@ -57,6 +57,8 @@
             cursor: pointer;
         }
     </style>
+
+	
 </head>
 <body>
 
@@ -68,25 +70,22 @@
 
     <!-- MOTOR -->
     <div class="card">
-        <h2>Motor Control</h2>
-
-        <button class="motor" onclick="send('/motorfridge')">Fridge</button>
-        <button class="motor" onclick="send('/motorroom')">Room</button>
-        <button class="stop" onclick="send('/motorstop')">STOP</button>
-
+        <h2>Get Diagnostics Now</h2>
+        <button class="motor" onclick="runSequence()">Run Test Now</button>
+        <button class="stop" onclick="(/motorstop)">STOP Test</button>
         <br><br>
 
-        <button class="blue" onclick="runSequence()">Run Debug</button>
+
 
         <p id="status"></p>
     </div>
     <br> <br>
     <div class="card">
             <!-- SENSOR PLACEHOLDER -->
-        <h2>Latest Test Resultsa</h2>
+        <h2>Latest Test Results</h2>
         <p>Ethanol: --</p>
         <p>Ammonia: --</p>
-        <p>Hydrogen fuckfide I think: --</p>
+        <p>Hydrogen Sulfide: --</p>
     </div>
 
 
