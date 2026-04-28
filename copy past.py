@@ -34,7 +34,6 @@
             color: var(--text);
         }
 
-        /* TOPBAR */
         .topbar {
             display: flex;
             justify-content: space-between;
@@ -66,7 +65,6 @@
             color: var(--accent);
         }
 
-        /* SECTION */
         .section-rule {
             padding: 20px 36px;
             font-family: var(--mono);
@@ -75,12 +73,10 @@
             text-transform: uppercase;
         }
 
-        /* MAIN */
         .main {
             padding: 20px 36px;
         }
 
-        /* CARD */
         .card {
             background: var(--white);
             border-radius: var(--radius);
@@ -101,7 +97,6 @@
             padding: 20px;
         }
 
-        /* FORM */
         input {
             padding: 8px;
             margin-right: 8px;
@@ -126,7 +121,6 @@
             color: white;
         }
 
-        /* TABLE */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -152,9 +146,8 @@
 
 <body>
 
-<!-- TOPBAR -->
 <header class="topbar">
-        <span class="topbar-wordmark">Fridge<em>Sniffer</em></span>
+    <span class="topbar-wordmark">Fridge<em>Sniffer</em></span>
     <div>
         <a href="/"><button class="nav-btn">Home</button></a>
     </div>
@@ -164,7 +157,6 @@
 
 <div class="main">
 
-    <!-- INVENTORY CARD -->
     <div class="card">
 
         <div class="card-header">
@@ -175,9 +167,10 @@
 
             <h4>Add Item</h4>
 
+            <!-- ✅ newDate uses onblur so full date is typed before parsing -->
             <input id="newItem" placeholder="Item">
-	    <input id="newDate" placeholder="Date In" onblur="autoFillExpiration(this.value)">
-	    <input id="newExp" placeholder="Expiration" oninput="this.value = normalizeDate(this.value)">
+            <input id="newDate" placeholder="Date In (MM-DD-YY)" onblur="autoFillExpiration(this.value)">
+            <input id="newExp" placeholder="Expiration" oninput="this.value = normalizeDate(this.value)">
 
             <button class="btn btn-primary" onclick="addRow()">Add</button>
 
@@ -200,10 +193,10 @@
 
 </div>
 
-<!-- ========================= -->
-<!-- ORIGINAL JS (UNCHANGED) -->
-<!-- ========================= -->
 <script>
+
+// ✅ Tracks which items have already fired an MQTT alert this session
+const alertedItems = new Set();
 
 // LOAD TABLE
 async function loadJSON() {
@@ -214,6 +207,13 @@ async function loadJSON() {
     const table = document.getElementById("yoloBody");
     table.innerHTML = "";
 
+    // ✅ Build today's date string in MM-DD-YY format for comparison
+    const today = new Date();
+    const todayMM = String(today.getMonth() + 1).padStart(2, '0');
+    const todayDD = String(today.getDate()).padStart(2, '0');
+    const todayYY = String(today.getFullYear()).slice(-2);
+    const todayStr = `${todayMM}-${todayDD}-${todayYY}`;
+
     data.forEach(row => {
         const tr = document.createElement("tr");
 
@@ -221,15 +221,12 @@ async function loadJSON() {
             <td contenteditable="true" onblur="updateRow(${row.id}, this)">
                 ${row.Item || ""}
             </td>
-
             <td contenteditable="true" onblur="updateRow(${row.id}, this)">
                 ${row["Date In"] || ""}
             </td>
-
             <td contenteditable="true" onblur="updateRow(${row.id}, this)">
                 ${row["Expected Expiration"] || ""}
             </td>
-
             <td>
                 <button class="btn btn-danger" onclick="deleteRow(${row.id})">
                     Delete
@@ -238,6 +235,22 @@ async function loadJSON() {
         `;
 
         table.appendChild(tr);
+
+        // ✅ Fire MQTT alert if expiration matches today, once per item per session
+        const expDate = row["Expected Expiration"] ? row["Expected Expiration"].trim() : "";
+        if (expDate && expDate === todayStr && !alertedItems.has(row.id)) {
+            alertedItems.add(row.id);
+            const itemName = row.Item || "Unknown Item";
+            const msg = `ALERT: ${itemName} has expired today (${expDate})`;
+            console.log("Firing expiry MQTT:", msg);
+            try {
+                const message = new Paho.MQTT.Message(msg);
+                message.destinationName = "sensorAlert";
+                client.send(message);
+            } catch (e) {
+                console.log("MQTT send error:", e);
+            }
+        }
     });
 }
 
@@ -277,28 +290,24 @@ async function addRow() {
     loadJSON();
 }
 
-
-
-
+// NORMALIZE: convert slashes to dashes
 function normalizeDate(dateStr) {
     if (!dateStr) return "";
-    // Convert slashes to dashes
     return dateStr.replace(/\//g, "-");
 }
 
+// ✅ AUTO FILL EXPIRATION: triggered onblur so full date is available
 function autoFillExpiration(dateStr) {
     if (!dateStr) return;
     const normalized = normalizeDate(dateStr);
     document.getElementById("newDate").value = normalized;
 
     const expField = document.getElementById("newExp");
-    if (expField.value.trim() !== "") return;
+    if (expField.value.trim() !== "") return; // don't overwrite if already filled
 
     const parts = normalized.split("-");
     if (parts.length !== 3) return;
     const [mm, dd, yy] = parts;
-
-    console.log("DEBUG parts:", mm, dd, yy); // ✅ check this in browser console
 
     const fullYear = parseInt(yy) < 100 ? 2000 + parseInt(yy) : parseInt(yy);
     const d = new Date(fullYear, parseInt(mm) - 1, parseInt(dd));
@@ -310,8 +319,6 @@ function autoFillExpiration(dateStr) {
     const omm = String(d.getMonth() + 1).padStart(2, '0');
     const odd = String(d.getDate()).padStart(2, '0');
     const oyy = String(d.getFullYear()).slice(-2);
-
-    console.log("DEBUG result:", omm, odd, oyy); // ✅ check this too
 
     expField.value = `${omm}-${odd}-${oyy}`;
 }
@@ -362,7 +369,7 @@ window.onload = function () {
     function onConnect() {
         console.log("Webpage connected to MQTT");
         client.subscribe("tempAlert");
-	client.subscribe("sensorAlert");
+        client.subscribe("sensorAlert");
     }
 
     function onConnectionLost(responseObject) {
