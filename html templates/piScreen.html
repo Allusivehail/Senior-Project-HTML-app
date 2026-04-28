@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -28,16 +29,24 @@
             padding: 0;
         }
 
+        html, body {
+            height: 100%;
+        }
+
         body {
             font-family: var(--sans);
             background: var(--bg);
             color: var(--text);
+            display: flex;
+            flex-direction: column;
         }
 
+        /* HEADER */
         .topbar {
             background: white;
             padding: 14px 16px;
             border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
         }
 
         .topbar-wordmark {
@@ -49,8 +58,11 @@
             color: var(--accent);
         }
 
+        /* MAIN FULL HEIGHT */
         .main {
-            padding: 16px;
+            flex: 1;
+            padding: 12px;
+            display: flex;
         }
 
         .card {
@@ -58,7 +70,9 @@
             border-radius: var(--radius);
             box-shadow: var(--shadow);
             border: 1px solid var(--border);
-            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            width: 100%;
         }
 
         .card-header {
@@ -68,18 +82,23 @@
             font-size: 11px;
             text-transform: uppercase;
             color: var(--text-muted);
+            flex-shrink: 0;
         }
 
         .card-body {
-            padding: 14px;
+            flex: 1;
+            padding: 12px;
+            display: flex;
         }
 
-        /* 2x2 GRID FOR GASES */
+        /* FULLSCREEN GRID */
         .gas-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
+            grid-auto-rows: 1fr;
             gap: 12px;
-            margin-top: 10px;
+            width: 100%;
+            height: 100%;
         }
 
         .gas-box {
@@ -87,70 +106,70 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 12px;
+
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
         .gas-title {
             font-size: 11px;
             text-transform: uppercase;
             color: var(--text-muted);
-            margin-bottom: 6px;
+            margin-bottom: 8px;
         }
 
         .gas-value {
-            font-size: 18px;
-            font-weight: 500;
+            font-size: 28px;
+            font-weight: 600;
             color: var(--text);
         }
-
     </style>
 </head>
 
 <body>
 
-<div class="topbar">
-    <div class="topbar-wordmark">Fridge <em>Sniffer</em></div>
-</div>
+    <!-- HEADER -->
+    <div class="topbar">
+        <div class="topbar-wordmark">Fridge <em>Sniffer</em></div>
+    </div>
 
-<div class="main">
+    <!-- MAIN CONTENT -->
+    <div class="main">
+   
+          
+            <div class="card-body">
+                <div class="gas-grid">
 
-    <div class="card">
-        <div class="card-header">Sensor Readings</div>
+                    <div class="gas-box">
+                        <div class="gas-title">Temperature</div>
+                        <div class="gas-value">--</div>
+                    </div>
+   
+                    <div class="gas-box">
+                        <div class="gas-title">Ethanol</div>
+                        <div class="gas-value">--</div>
+                    </div>
 
-        <div class="card-body">
+                    <div class="gas-box">
+                        <div class="gas-title">Ammonia</div>
+                        <div class="gas-value">--</div>
+                    </div>
 
-            <div class="gas-grid">
+                    <div class="gas-box">
+                        <div class="gas-title">Hydrogen Sulfide</div>
+                        <div class="gas-value">--</div>
+                    </div>
 
-                <div class="gas-box">
-                    <div class="gas-title">Temperature</div>
-                    <div class="gas-value">--</div>
+
+                    </div>
+
                 </div>
-
-                <div class="gas-box">
-                    <div class="gas-title">Humidity</div>
-                    <div class="gas-value">--</div>
-                </div>
-
-                <div class="gas-box">
-                    <div class="gas-title">Ethanol</div>
-                    <div class="gas-value">--</div>
-                </div>
-
-                <div class="gas-box">
-                    <div class="gas-title">Ammonia</div>
-                    <div class="gas-value">--</div>
-                </div>
-
-                <div class="gas-box">
-                    <div class="gas-title">Hydrogen Sulfide</div>
-                    <div class="gas-value">--</div>
-                </div>
-
             </div>
-
         </div>
     </div>
 
-</div>
-
 </body>
 </html>
+```
