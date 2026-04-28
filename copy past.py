@@ -176,7 +176,7 @@
             <h4>Add Item</h4>
 
             <input id="newItem" placeholder="Item">
-	    <input id="newDate" placeholder="Date In" oninput="autoFillExpiration(this.value)">
+	    <input id="newDate" placeholder="Date In" onblur="autoFillExpiration(this.value)">
 	    <input id="newExp" placeholder="Expiration" oninput="this.value = normalizeDate(this.value)">
 
             <button class="btn btn-primary" onclick="addRow()">Add</button>
