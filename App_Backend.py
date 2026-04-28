@@ -1,12 +1,11 @@
 from flask import Flask, request, jsonify, render_template, send_file
-from datetime import datetime, timedelta  # ✅ KEEP ONLY THIS, remove the bare "import datetime" below
+from datetime import datetime, timedelta
 import socket
 import serial
 import csv
 import json
 import time, traceback
 import threading
-# ❌ REMOVED: import datetime  <-- this was overwriting the line above
 import cv2
 import board
 import neopixel_spi as neopixel
@@ -16,7 +15,7 @@ import pandas as pd
 from paho.mqtt import client as mqtt_client
 
 
-# ---------------- MQTT (unchanged placeholders) ---------------- #
+# ---------------- MQTT ---------------- #
 
 def connect_mqtt():
     def on_connect(client, userdata, flags, rc):
@@ -47,14 +46,18 @@ def publish(client, msg):
 app = Flask(__name__)
 
 CSV_PATH = "/home/mert/app_gui/inventory_data/yolo_temp.csv"
+GAS_PATH = "" # Future place for gas sensors csv file
 
 
 # ---------------- UI ROUTES ---------------- #
 
+#@app.route("/") # change this to be the default start later on
+#def root():
+#    return render_template("login.html")
+
 @app.route("/")
 def root():
     return render_template("newDash.html")
-
 
 @app.route("/inventory")
 def inventory():
@@ -116,7 +119,7 @@ def capture_image():
         traceback.print_exc()
         return jsonify({"message": str(e)}), 500
 
-# ---------------- CSV ---------------- #
+# ---------------- CSV read in ---------------- #
 
 def read_csv():
     try:
@@ -149,9 +152,15 @@ def read_csv():
         print("CSV ERROR:", e)
         return []
 
+
 @app.route('/api/get-json')
 def get_json():
     return jsonify({"data": read_csv()}), 200
+
+
+
+
+
 
 @app.route('/api/add-row', methods=['POST'])
 def add_row():
@@ -221,18 +230,31 @@ def delete_row():
         traceback.print_exc()
         return jsonify({"message": "error"}), 500
 
-# ---------------- DEBUG ROUTE ---------------- #
 
-@app.route('/api/debug-csv')
-def debug_csv():
-    return jsonify({
-        "exists": os.path.exists(CSV_PATH),
-        "path": CSV_PATH,
-        "cwd": os.getcwd(),
-        "dir_contents": os.listdir(os.path.dirname(CSV_PATH)) if os.path.exists(os.path.dirname(CSV_PATH)) else []
-    })
 
-# ---------------- RUN ---------------- #
+@app.route('/api/gas-data')
+def gas_data():
+    try:
+        if not os.path.exists(GAS_PATH):
+            return jsonify({"error": "No data yet"}), 404
+
+        df = pd.read_csv(GAS_PATH, header=None)
+
+        # ✅ Grab the last row (most recent reading)
+        last = df.iloc[-1]
+
+        return jsonify({
+            "Temperature":       str(last[0]) if len(last) > 0 else "--",
+            "Ethanol":           str(last[1]) if len(last) > 1 else "--",
+            "Ammonia":           str(last[2]) if len(last) > 2 else "--",
+            "Hydrogen Sulfide":  str(last[3]) if len(last) > 3 else "--"
+        }), 200
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+# ---------------- Run flask server ---------------- #
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
