@@ -48,7 +48,6 @@
             z-index: 0;
         }
 
-        /* ── TOP BAR ── */
         .topbar {
             position: relative;
             z-index: 10;
@@ -113,7 +112,6 @@
             color: var(--accent);
         }
 
-        /* ── LAYOUT ── */
         .section-rule {
             position: relative;
             z-index: 1;
@@ -148,7 +146,6 @@
             padding: 12px 36px 36px;
         }
 
-        /* ── CARDS ── */
         .card {
             background: var(--white);
             border: 1px solid var(--border);
@@ -212,7 +209,6 @@
 
         .card-body { padding: 22px; }
 
-        /* ── BUTTONS ── */
         .cam-actions {
             display: flex;
             gap: 8px;
@@ -261,7 +257,6 @@
             transform: translateY(-1px);
         }
 
-        /* ── CAMERA VIEWPORT ── */
         .cam-viewport {
             position: relative;
             background: var(--bg);
@@ -313,7 +308,6 @@
             letter-spacing: 0.04em;
         }
 
-        /* ── DIAGNOSTICS ── */
         .diag-grid {
             display: flex;
             flex-direction: column;
@@ -377,7 +371,6 @@
             letter-spacing: 0.03em;
         }
 
-        /* ── MISC ── */
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: var(--bg); }
         ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
@@ -447,33 +440,38 @@
         </div>
         <div class="card-body">
             <div class="diag-grid">
+
                 <div class="diag-row">
                     <div class="diag-label"><div class="diag-dot"></div>Temperature</div>
-                    <div class="diag-bar-track"><div class="diag-bar-fill"></div></div>
-                    <div class="diag-value">--</div>
+                    <div class="diag-bar-track"><div class="diag-bar-fill" id="tempBar"></div></div>
+                    <div class="diag-value" id="tempVal">--</div>  <!-- ✅ ID ADDED -->
                 </div>
+
                 <div class="diag-row">
                     <div class="diag-label"><div class="diag-dot"></div>Ethanol</div>
-                    <div class="diag-bar-track"><div class="diag-bar-fill"></div></div>
-                    <div class="diag-value">--</div>
+                    <div class="diag-bar-track"><div class="diag-bar-fill" id="ethanolBar"></div></div>
+                    <div class="diag-value" id="ethanolVal">--</div>  <!-- ✅ ID ADDED -->
                 </div>
+
                 <div class="diag-row">
                     <div class="diag-label"><div class="diag-dot"></div>Ammonia</div>
-                    <div class="diag-bar-track"><div class="diag-bar-fill"></div></div>
-                    <div class="diag-value">--</div>
+                    <div class="diag-bar-track"><div class="diag-bar-fill" id="ammoniaBar"></div></div>
+                    <div class="diag-value" id="ammoniaVal">--</div>  <!-- ✅ ID ADDED -->
                 </div>
+
                 <div class="diag-row">
                     <div class="diag-label"><div class="diag-dot"></div>Hydrogen Sulfide</div>
-                    <div class="diag-bar-track"><div class="diag-bar-fill"></div></div>
-                    <div class="diag-value">--</div>
+                    <div class="diag-bar-track"><div class="diag-bar-fill" id="h2sBar"></div></div>
+                    <div class="diag-value" id="h2sVal">--</div>  <!-- ✅ ID ADDED -->
                 </div>
+
             </div>
         </div>
     </div>
 
 </div>
 
-<!-- ALL ORIGINAL SCRIPTS PRESERVED EXACTLY -->
+<!-- CAMERA SCRIPT -->
 <script>
 function loadImage() {
     const img = document.getElementById("cam");
@@ -495,8 +493,8 @@ async function captureImage() {
 }
 </script>
 
+<!-- MQTT -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
-
 <script>
     if (Notification.permission !== "granted") {
         Notification.requestPermission();
@@ -519,7 +517,7 @@ async function captureImage() {
     function onConnect() {
         console.log("Webpage connected to MQTT");
         client.subscribe("tempAlert");
-	client.subscribe("sensorAlert");
+        client.subscribe("sensorAlert");
     }
 
     function onConnectionLost(responseObject) {
@@ -539,6 +537,28 @@ async function captureImage() {
             alert("MQTT Message: " + message.payloadString);
         }
     }
+</script>
+
+<!-- ✅ GAS DATA FETCH -->
+<script>
+async function loadGasData() {
+    try {
+        const res = await fetch('/api/gas-data');
+        if (!res.ok) return;
+        const data = await res.json();
+
+        document.getElementById('tempVal').textContent        = data.Temperature        ?? '--';
+        document.getElementById('ethanolVal').textContent     = data.Ethanol            ?? '--';
+        document.getElementById('ammoniaVal').textContent     = data.Ammonia            ?? '--';
+        document.getElementById('h2sVal').textContent         = data["Hydrogen Sulfide"] ?? '--';
+
+    } catch (err) {
+        console.error("Gas fetch error:", err);
+    }
+}
+
+loadGasData();
+setInterval(loadGasData, 2000);
 </script>
 
 </body>
