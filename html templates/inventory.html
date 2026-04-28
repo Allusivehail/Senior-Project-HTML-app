@@ -34,7 +34,6 @@
             color: var(--text);
         }
 
-        /* TOPBAR */
         .topbar {
             display: flex;
             justify-content: space-between;
@@ -66,7 +65,6 @@
             color: var(--accent);
         }
 
-        /* SECTION */
         .section-rule {
             padding: 20px 36px;
             font-family: var(--mono);
@@ -75,12 +73,10 @@
             text-transform: uppercase;
         }
 
-        /* MAIN */
         .main {
             padding: 20px 36px;
         }
 
-        /* CARD */
         .card {
             background: var(--white);
             border-radius: var(--radius);
@@ -101,7 +97,6 @@
             padding: 20px;
         }
 
-        /* FORM */
         input {
             padding: 8px;
             margin-right: 8px;
@@ -126,7 +121,6 @@
             color: white;
         }
 
-        /* TABLE */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -152,9 +146,8 @@
 
 <body>
 
-<!-- TOPBAR -->
 <header class="topbar">
-        <span class="topbar-wordmark">Fridge<em>Sniffer</em></span>
+    <span class="topbar-wordmark">Fridge<em>Sniffer</em></span>
     <div>
         <a href="/"><button class="nav-btn">Home</button></a>
     </div>
@@ -164,7 +157,6 @@
 
 <div class="main">
 
-    <!-- INVENTORY CARD -->
     <div class="card">
 
         <div class="card-header">
@@ -176,8 +168,8 @@
             <h4>Add Item</h4>
 
             <input id="newItem" placeholder="Item">
-	    <input id="newDate" placeholder="Date In" onblur="autoFillExpiration(this.value)">
-	    <input id="newExp" placeholder="Expiration" oninput="this.value = normalizeDate(this.value)">
+            <input id="newDate" placeholder="Date In (MM-DD-YY)" onblur="autoFillExpiration(this.value)">
+            <input id="newExp" placeholder="Expiration" oninput="this.value = normalizeDate(this.value)">
 
             <button class="btn btn-primary" onclick="addRow()">Add</button>
 
@@ -200,10 +192,10 @@
 
 </div>
 
-<!-- ========================= -->
-<!-- ORIGINAL JS (UNCHANGED) -->
-<!-- ========================= -->
 <script>
+
+// ✅ Tracks which items have already fired an MQTT alert this session
+const alertedItems = new Set();
 
 // LOAD TABLE
 async function loadJSON() {
@@ -214,6 +206,13 @@ async function loadJSON() {
     const table = document.getElementById("yoloBody");
     table.innerHTML = "";
 
+    // ✅ Build today's date string in MM-DD-YY format for comparison
+    const today = new Date();
+    const todayMM = String(today.getMonth() + 1).padStart(2, '0');
+    const todayDD = String(today.getDate()).padStart(2, '0');
+    const todayYY = String(today.getFullYear()).slice(-2);
+    const todayStr = `${todayMM}-${todayDD}-${todayYY}`;
+
     data.forEach(row => {
         const tr = document.createElement("tr");
 
@@ -221,15 +220,12 @@ async function loadJSON() {
             <td contenteditable="true" onblur="updateRow(${row.id}, this)">
                 ${row.Item || ""}
             </td>
-
             <td contenteditable="true" onblur="updateRow(${row.id}, this)">
                 ${row["Date In"] || ""}
             </td>
-
             <td contenteditable="true" onblur="updateRow(${row.id}, this)">
                 ${row["Expiration"] || ""}
             </td>
-
             <td>
                 <button class="btn btn-danger" onclick="deleteRow(${row.id})">
                     Delete
@@ -238,151 +234,30 @@ async function loadJSON() {
         `;
 
         table.appendChild(tr);
+
+        // ✅ Fire MQTT alert if expiration matches today, once per item per session
+        const expDate = row["Expiration"] ? row["Expiration"].trim() : "";
+        if (expDate && expDate === todayStr && !alertedItems.has(row.id)) {
+            alertedItems.add(row.id);
+            const itemName = row.Item || "Unknown Item";
+            const msg = `ALERT: ${itemName} has expired today (${expDate})`;
+            console.log("Firing expiry MQTT:", msg);
+            try {
+                const message = new Paho.MQTT.Message(msg);
+                message.destinationName = "sensorAlert";
+                client.send(message);
+            } catch (e) {
+                console.log("MQTT send error:", e);
+            }
+        }
     });
 }
 
-// UPDATE ROW
+// UPDATE ROW — ✅ now awaits fetch and reloads table after save
 async function updateRow(id, cell) {
     const row = cell.parentElement;
     const c = row.children;
 
     await fetch("/api/update-row", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            id: id,
-            Item: c[0].innerText.trim(),
-            "Date In": c[1].innerText.trim(),
-            "Expiration": c[2].innerText.trim()
-        })
-    });
-}
-
-// ADD ROW
-async function addRow() {
-    await fetch("/api/add-row", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            "Item": document.getElementById("newItem").value,
-            "Date In": document.getElementById("newDate").value,
-            "Expiration": document.getElementById("newExp").value
-        })
-    });
-
-    document.getElementById("newItem").value = "";
-    document.getElementById("newDate").value = "";
-    document.getElementById("newExp").value = "";
-
-    loadJSON();
-}
-
-
-
-
-function normalizeDate(dateStr) {
-    if (!dateStr) return "";
-    // Convert slashes to dashes
-    return dateStr.replace(/\//g, "-");
-}
-
-function autoFillExpiration(dateStr) {
-    if (!dateStr) return;
-    const normalized = normalizeDate(dateStr);
-    document.getElementById("newDate").value = normalized;
-
-    const expField = document.getElementById("newExp");
-    if (expField.value.trim() !== "") return;
-
-    const parts = normalized.split("-");
-    if (parts.length !== 3) return;
-    const [mm, dd, yy] = parts;
-
-    console.log("DEBUG parts:", mm, dd, yy); // ✅ check this in browser console
-
-    const fullYear = parseInt(yy) < 100 ? 2000 + parseInt(yy) : parseInt(yy);
-    const d = new Date(fullYear, parseInt(mm) - 1, parseInt(dd));
-
-    if (isNaN(d.getTime())) return;
-
-    d.setDate(d.getDate() + 5);
-
-    const omm = String(d.getMonth() + 1).padStart(2, '0');
-    const odd = String(d.getDate()).padStart(2, '0');
-    const oyy = String(d.getFullYear()).slice(-2);
-
-    console.log("DEBUG result:", omm, odd, oyy); // ✅ check this too
-
-    expField.value = `${omm}-${odd}-${oyy}`;
-}
-
-// DELETE ROW
-async function deleteRow(id) {
-    const confirmDelete = confirm("Are you sure you want to delete this row?");
-    if (!confirmDelete) return;
-
-    await fetch("/api/delete-row", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ id: id })
-    });
-
-    loadJSON();
-}
-
-// INIT
-window.onload = function () {
-    loadJSON();
-    setInterval(loadJSON, 1000);
-};
-
-</script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
-
-<script>
-    if (Notification.permission !== "granted") {
-        Notification.requestPermission();
-    }
-
-    const client = new Paho.MQTT.Client("10.100.138.163", 8083, "clientId");
-
-    const connectOptions = {
-        onSuccess: onConnect,
-        useSSL: false,
-        userName: "testUser",
-        password: "pass"
-    };
-
-    client.onConnectionLost = onConnectionLost;
-    client.onMessageArrived = onMessageArrived;
-
-    client.connect(connectOptions);
-
-    function onConnect() {
-        console.log("Webpage connected to MQTT");
-        client.subscribe("tempAlert");
-	client.subscribe("sensorAlert");
-    }
-
-    function onConnectionLost(responseObject) {
-        if (responseObject.errorCode !== 0) {
-            console.log("onConnectionLost:" + responseObject.errorMessage);
-        }
-    }
-
-    function onMessageArrived(message) {
-        console.log("Message Arrived: " + message.payloadString);
-        if (Notification.permission === "granted") {
-            new Notification("New MQTT Message", {
-                body: message.payloadString,
-                icon: "https://cdn-icons-png.flaticon.com/512/1827/1827347.png"
-            });
-        } else {
-            alert("MQTT Message: " + message.payloadString);
-        }
-    }
-</script>
-
-</body>
-</html>
+        headers: {
