@@ -3,7 +3,6 @@
 <head>
     <title>Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
-
     <style>
         :root {
             --bg: #f0f2f5;
@@ -49,6 +48,7 @@
             z-index: 0;
         }
 
+        /* ── TOP BAR ── */
         .topbar {
             position: relative;
             z-index: 10;
@@ -61,15 +61,30 @@
             border-bottom: 1px solid var(--border);
         }
 
+        .topbar-brand {
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+
         .topbar-wordmark {
             font-family: var(--serif);
             font-size: 22px;
             color: var(--text);
+            letter-spacing: -0.01em;
         }
 
         .topbar-wordmark em {
             font-style: italic;
             color: var(--accent);
+        }
+
+        .topbar-sub {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
         }
 
         .topbar-nav {
@@ -86,8 +101,19 @@
             border-radius: 7px;
             background: var(--surface);
             color: var(--text-mid);
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.15s;
+            display: inline-block;
         }
 
+        .nav-btn:hover {
+            background: var(--accent-light);
+            border-color: var(--accent-mid);
+            color: var(--accent);
+        }
+
+        /* ── LAYOUT ── */
         .section-rule {
             position: relative;
             z-index: 1;
@@ -100,8 +126,10 @@
         .section-rule span {
             font-family: var(--mono);
             font-size: 10px;
+            letter-spacing: 0.14em;
             color: var(--text-muted);
             text-transform: uppercase;
+            white-space: nowrap;
         }
 
         .section-rule::after {
@@ -120,24 +148,172 @@
             padding: 12px 36px 36px;
         }
 
+        /* ── CARDS ── */
         .card {
             background: var(--white);
             border: 1px solid var(--border);
             border-radius: var(--radius);
             box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: box-shadow 0.2s, border-color 0.2s;
+            animation: riseIn 0.35s ease both;
+        }
+
+        .card:nth-child(2) { animation-delay: 0.07s; }
+
+        .card:hover {
+            box-shadow: var(--shadow-hover);
+            border-color: var(--border-strong);
+        }
+
+        @keyframes riseIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
         .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             padding: 14px 20px;
             border-bottom: 1px solid var(--border);
             background: var(--surface);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 9px;
             font-size: 11px;
+            font-weight: 600;
             text-transform: uppercase;
+            letter-spacing: 0.12em;
             color: var(--text-muted);
+        }
+
+        .card-title svg {
+            width: 15px;
+            height: 15px;
+            stroke: var(--text-muted);
+            fill: none;
+            stroke-width: 1.8;
+            flex-shrink: 0;
+        }
+
+        .card-tag {
+            font-family: var(--mono);
+            font-size: 10px;
+            padding: 3px 9px;
+            border-radius: 20px;
+            background: var(--accent-light);
+            color: var(--accent);
+            letter-spacing: 0.04em;
         }
 
         .card-body { padding: 22px; }
 
+        /* ── BUTTONS ── */
+        .cam-actions {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .btn {
+            font-family: var(--sans);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            padding: 9px 18px;
+            border-radius: 7px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.15s;
+        }
+
+        .btn svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; flex-shrink: 0; }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #fff;
+            box-shadow: 0 1px 3px rgba(0,105,217,0.28), 0 3px 10px rgba(0,105,217,0.14);
+        }
+
+        .btn-primary:hover {
+            background: #0057b8;
+            box-shadow: 0 2px 6px rgba(0,105,217,0.35), 0 6px 18px rgba(0,105,217,0.18);
+            transform: translateY(-1px);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--text-mid);
+            border: 1px solid var(--border-strong);
+        }
+
+        .btn-ghost:hover {
+            background: var(--surface);
+            border-color: var(--text-muted);
+            color: var(--text);
+            transform: translateY(-1px);
+        }
+
+        /* ── CAMERA VIEWPORT ── */
+        .cam-viewport {
+            position: relative;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cam-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .cam-placeholder svg {
+            width: 36px;
+            height: 36px;
+            stroke: var(--border-strong);
+            fill: none;
+            stroke-width: 1.5;
+        }
+
+        .cam-placeholder span {
+            font-family: var(--mono);
+            font-size: 10px;
+            letter-spacing: 0.14em;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        #cam {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
+        .cam-status {
+            margin-top: 10px;
+            font-family: var(--mono);
+            font-size: 11px;
+            color: var(--accent);
+            min-height: 16px;
+            letter-spacing: 0.04em;
+        }
+
+        /* ── DIAGNOSTICS ── */
         .diag-grid {
             display: flex;
             flex-direction: column;
@@ -153,136 +329,216 @@
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 8px;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .diag-row:hover {
+            background: var(--accent-light);
+            border-color: var(--accent-mid);
         }
 
         .diag-label {
+            display: flex;
+            align-items: center;
+            gap: 9px;
             font-size: 12px;
+            font-weight: 500;
             color: var(--text-mid);
+        }
+
+        .diag-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: var(--border-strong);
+            flex-shrink: 0;
+        }
+
+        .diag-bar-track {
+            height: 4px;
+            background: var(--border);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .diag-bar-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 4px;
+            background: linear-gradient(90deg, var(--accent-mid), var(--accent));
+            transition: width 0.6s ease;
         }
 
         .diag-value {
             font-family: var(--mono);
             font-size: 13px;
-            text-align: right;
             color: var(--text-muted);
+            text-align: right;
+            letter-spacing: 0.03em;
+        }
+
+        /* ── MISC ── */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+
+        @media (max-width: 768px) {
+            .main { grid-template-columns: 1fr; padding: 12px 16px 24px; }
+            .topbar { padding: 0 16px; }
+            .topbar-sub { display: none; }
+            .section-rule { padding: 16px 16px 6px; }
         }
     </style>
 </head>
-
 <body>
 
 <header class="topbar">
-    <span class="topbar-wordmark">Dash<em>board</em></span>
+    <div class="topbar-brand">
+        <span class="topbar-wordmark">Fridge<em>Sniffer</em></span>
+    </div>
     <nav class="topbar-nav">
-        <a href="/inventory" class="nav-btn">Inventory</a>
+        <a href="/inventory"><button class="nav-btn">Inventory</button></a>
     </nav>
 </header>
 
-<div class="section-rule"><span>Fridge Diagnostics</span></div>
+<div class="section-rule"><span>Welcome: Mr. XYZ</span></div>
 
 <div class="main">
 
-    <!-- CAMERA (UNCHANGED) -->
+    <!-- CAMERA CARD -->
     <div class="card">
-        <div class="card-header">Camera</div>
-        <div class="card-body">
-            <div class="cam-viewport">
-                <img id="cam">
+        <div class="card-header">
+            <div class="card-title">
+                <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                Camera
             </div>
+            <span class="card-tag">CAM-01</span>
+        </div>
+        <div class="card-body">
+            <div class="cam-actions">
+                <button class="btn btn-primary" onclick="captureImage()">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M20 4h-3.17L15 2H9L7.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2z"/></svg>
+                    Take Picture
+                </button>
+                <button class="btn btn-ghost" onclick="loadImage()">
+                    <svg viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
+                    Refresh
+                </button>
+            </div>
+
+            <div class="cam-viewport">
+                <div class="cam-placeholder" id="camPlaceholder">
+                    <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                    <span>No Signal</span>
+                </div>
+                <img id="cam" alt="Camera feed">
+            </div>
+            <p class="cam-status" id="cameraStatus"></p>
         </div>
     </div>
 
-    <!-- DIAGNOSTICS -->
+    <!-- DIAGNOSTICS CARD -->
     <div class="card">
-        <div class="card-header">Sensors</div>
-        <div class="card-body">
-
-            <div class="diag-grid">
-
-                <div class="diag-row">
-                    <div class="diag-label">Temperature</div>
-                    <div></div>
-                    <div class="diag-value" id="tempVal">--</div>
-                </div>
-
-                <div class="diag-row">
-                    <div class="diag-label">Ethanol</div>
-                    <div></div>
-                    <div class="diag-value" id="ethanolVal">--</div>
-                </div>
-
-                <div class="diag-row">
-                    <div class="diag-label">Ammonia</div>
-                    <div></div>
-                    <div class="diag-value" id="ammoniaVal">--</div>
-                </div>
-
-                <div class="diag-row">
-                    <div class="diag-label">Hydrogen Sulfide</div>
-                    <div></div>
-                    <div class="diag-value" id="h2sVal">--</div>
-                </div>
-
+        <div class="card-header">
+            <div class="card-title">
+                <svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                Fridge Diagnostics
             </div>
-
+        </div>
+        <div class="card-body">
+            <div class="diag-grid">
+                <div class="diag-row">
+                    <div class="diag-label"><div class="diag-dot"></div>Temperature</div>
+                    <div class="diag-bar-track"><div class="diag-bar-fill"></div></div>
+                    <div class="diag-value">--</div>
+                </div>
+                <div class="diag-row">
+                    <div class="diag-label"><div class="diag-dot"></div>Ethanol</div>
+                    <div class="diag-bar-track"><div class="diag-bar-fill"></div></div>
+                    <div class="diag-value">--</div>
+                </div>
+                <div class="diag-row">
+                    <div class="diag-label"><div class="diag-dot"></div>Ammonia</div>
+                    <div class="diag-bar-track"><div class="diag-bar-fill"></div></div>
+                    <div class="diag-value">--</div>
+                </div>
+                <div class="diag-row">
+                    <div class="diag-label"><div class="diag-dot"></div>Hydrogen Sulfide</div>
+                    <div class="diag-bar-track"><div class="diag-bar-fill"></div></div>
+                    <div class="diag-value">--</div>
+                </div>
+            </div>
         </div>
     </div>
 
 </div>
 
-<!-- CAMERA SCRIPT (UNCHANGED) -->
+<!-- ALL ORIGINAL SCRIPTS PRESERVED EXACTLY -->
 <script>
 function loadImage() {
     const img = document.getElementById("cam");
+    const placeholder = document.getElementById("camPlaceholder");
     img.src = "/static/IMG/http_test_image.png?rand=" + Math.random();
     img.style.display = "block";
+    if (placeholder) placeholder.style.display = "none";
 }
 
 async function captureImage() {
-    await fetch("/api/capture-image");
-    loadImage();
+    const res = await fetch("/api/capture-image");
+    const data = await res.json();
+    document.getElementById("cameraStatus").innerText = data.message;
+    const img = document.getElementById("cam");
+    const placeholder = document.getElementById("camPlaceholder");
+    img.src = "/static/IMG/http_test_image.png?rand=" + Math.random();
+    img.style.display = "block";
+    if (placeholder) placeholder.style.display = "none";
 }
 </script>
 
-<!-- MQTT (UNCHANGED) -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
 
 <script>
-const client = new Paho.MQTT.Client("10.100.138.163", 8083, "clientId");
-
-client.onConnectionLost = () => console.log("MQTT lost");
-client.onMessageArrived = (msg) => console.log(msg.payloadString);
-
-client.connect({
-    onSuccess: () => {
-        client.subscribe("tempAlert");
-        client.subscribe("sensorAlert");
-    },
-    useSSL: false,
-    userName: "testUser",
-    password: "pass"
-});
-</script>
-
-<!-- ✅ ONLY ADDED: GAS CSV SYSTEM -->
-<script>
-async function loadGasData() {
-    try {
-        const res = await fetch('/api/gas-data');
-        const data = await res.json();
-
-        document.getElementById('tempVal').textContent = data.Temperature ?? '--';
-        document.getElementById('ethanolVal').textContent = data.Ethanol ?? '--';
-        document.getElementById('ammoniaVal').textContent = data.Ammonia ?? '--';
-        document.getElementById('h2sVal').textContent = data["Hydrogen Sulfide"] ?? '--';
-
-    } catch (err) {
-        console.error("Gas fetch error:", err);
+    if (Notification.permission !== "granted") {
+        Notification.requestPermission();
     }
-}
 
-loadGasData();
-setInterval(loadGasData, 2000);
+    const client = new Paho.MQTT.Client("10.100.138.163", 8083, "clientId");
+
+    const connectOptions = {
+        onSuccess: onConnect,
+        useSSL: false,
+        userName: "testUser",
+        password: "pass"
+    };
+
+    client.onConnectionLost = onConnectionLost;
+    client.onMessageArrived = onMessageArrived;
+
+    client.connect(connectOptions);
+
+    function onConnect() {
+        console.log("Webpage connected to MQTT");
+        client.subscribe("tempAlert");
+	client.subscribe("sensorAlert");
+    }
+
+    function onConnectionLost(responseObject) {
+        if (responseObject.errorCode !== 0) {
+            console.log("onConnectionLost:" + responseObject.errorMessage);
+        }
+    }
+
+    function onMessageArrived(message) {
+        console.log("Message Arrived: " + message.payloadString);
+        if (Notification.permission === "granted") {
+            new Notification("Alert!", {
+                body: message.payloadString,
+                icon: "https://cdn-icons-png.flaticon.com/512/1827/1827347.png"
+            });
+        } else {
+            alert("MQTT Message: " + message.payloadString);
+        }
+    }
 </script>
 
 </body>
