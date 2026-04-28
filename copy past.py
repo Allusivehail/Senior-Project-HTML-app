@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify, render_template, send_file
+from datetime import datetime, timedelta
 import socket
 import serial
 import csv
@@ -14,11 +15,6 @@ import glob
 import pandas as pd
 from paho.mqtt import client as mqtt_client
 
-# ---------------- SERIAL ---------------- #
-
-ser = None
-serial_lock = threading.Lock()
-current_port = None
 
 # ---------------- MQTT (unchanged placeholders) ---------------- #
 
@@ -45,98 +41,6 @@ def publish(client, msg):
         print(f"Send `{msg}` to topic `{topic}`")
     else:
         print(f"Failed to send message to topic {topic}")
-
-# ---------------- SERIAL FUNCTIONS ---------------- #
-
-def find_arduino_port():
-    ports = glob.glob('/dev/ttyACM*')
-    return ports[0] if ports else None
-
-
-def open_serial():
-    global ser, current_port
-
-    try:
-        port = find_arduino_port()
-
-        if port is None:
-            print("No Arduino port found")
-            ser = None
-            return
-
-        if current_port == port and ser and ser.is_open:
-            return
-
-        if ser:
-            try:
-                ser.close()
-            except:
-                pass
-
-        ser = serial.Serial(port, 9600, timeout=1)
-        time.sleep(2)
-
-        current_port = port
-        print(f"Connected to Arduino on {port}")
-
-    except Exception as e:
-        print(f"Serial open failed: {e}")
-        ser = None
-        current_port = None
-
-
-def get_ser():
-    global ser
-
-    if ser is None:
-        open_serial()
-        return ser
-
-    try:
-        ser.in_waiting
-    except:
-        print("Serial lost — reconnecting...")
-        open_serial()
-
-    return ser
-
-
-def safe_ser_write(data):
-    with serial_lock:
-        try:
-            s = get_ser()
-            if s:
-                s.write(data)
-        except Exception as e:
-            print(f"Write failed: {e}")
-            open_serial()
-
-
-def serial_monitor():
-    global current_port
-
-    while True:
-        try:
-            port = find_arduino_port()
-
-            if port is None:
-                if ser:
-                    print("Arduino disconnected")
-                open_serial()
-                time.sleep(1)
-                continue
-
-            if port != current_port:
-                print(f"Port switch detected: {current_port} → {port}")
-                open_serial()
-
-        except Exception as e:
-            print(f"Serial monitor error: {e}")
-
-        time.sleep(1)
-
-
-threading.Thread(target=serial_monitor, daemon=True).start()
 
 # ---------------- FLASK APP ---------------- #
 
@@ -258,17 +162,28 @@ def add_row():
     try:
         data = request.get_json()
 
+        # ✅ ADD THIS BLOCK RIGHT HERE
+        date_in_str = data.get("Date In", "")
+        if date_in_str and not data.get("Expected Expiration"):
+            try:
+                date_in = datetime.strptime(date_in_str, "%Y-%m-%d")
+                data["Expected Expiration"] = (date_in + timedelta(days=5)).strftime("%Y-%m-%d")
+            except ValueError:
+                pass
+
         new_row = pd.DataFrame([{
             "Item": data.get("Item", ""),
             "Date In": data.get("Date In", ""),
             "Expected Expiration": data.get("Expected Expiration", "")
         }])
+        # ... rest unchanged
 
         if os.path.exists(CSV_PATH):
             df = pd.read_csv(CSV_PATH)
         else:
             df = pd.DataFrame(columns=["Item", "Date In", "Expected Expiration"])
 
+		
         df = pd.concat([df, new_row], ignore_index=True)
         df.to_csv(CSV_PATH, index=False)
 
