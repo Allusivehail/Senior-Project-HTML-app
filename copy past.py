@@ -14,10 +14,18 @@ function autoFillExpiration(dateStr) {
     document.getElementById("newDate").value = normalized;
 
     const expField = document.getElementById("newExp");
-    if (expField.value.trim() !== "") return; // don't overwrite if already filled
+    if (expField.value.trim() !== "") return;
 
-    const d = new Date(normalized);
+    // Parse MM-DD-YY explicitly
+    const parts = normalized.split("-");
+    if (parts.length !== 3) return;
+    const [mm, dd, yy] = parts;
+    const d = new Date(`20${yy}-${mm}-${dd}`);
     if (isNaN(d)) return;
+
     d.setDate(d.getDate() + 5);
-    expField.value = d.toISOString().split('T')[0];
+    const omm = String(d.getMonth() + 1).padStart(2, '0');
+    const odd = String(d.getDate()).padStart(2, '0');
+    const oyy = String(d.getFullYear()).slice(-2);
+    expField.value = `${omm}-${odd}-${oyy}`;
 }
