@@ -1,11 +1,12 @@
 from flask import Flask, request, jsonify, render_template, send_file
+from datetime import datetime, timedelta  # ✅ KEEP ONLY THIS, remove the bare "import datetime" below
 import socket
 import serial
 import csv
 import json
 import time, traceback
 import threading
-import datetime
+# ❌ REMOVED: import datetime  <-- this was overwriting the line above
 import cv2
 import board
 import neopixel_spi as neopixel
@@ -14,11 +15,6 @@ import glob
 import pandas as pd
 from paho.mqtt import client as mqtt_client
 
-# ---------------- SERIAL ---------------- #
-
-ser = None
-serial_lock = threading.Lock()
-current_port = None
 
 # ---------------- MQTT (unchanged placeholders) ---------------- #
 
@@ -46,107 +42,12 @@ def publish(client, msg):
     else:
         print(f"Failed to send message to topic {topic}")
 
-# ---------------- SERIAL FUNCTIONS ---------------- #
-
-def find_arduino_port():
-    ports = glob.glob('/dev/ttyACM*')
-    return ports[0] if ports else None
-
-
-def open_serial():
-    global ser, current_port
-
-    try:
-        port = find_arduino_port()
-
-        if port is None:
-            print("No Arduino port found")
-            ser = None
-            return
-
-        if current_port == port and ser and ser.is_open:
-            return
-
-        if ser:
-            try:
-                ser.close()
-            except:
-                pass
-
-        ser = serial.Serial(port, 9600, timeout=1)
-        time.sleep(2)
-
-        current_port = port
-        print(f"Connected to Arduino on {port}")
-
-    except Exception as e:
-        print(f"Serial open failed: {e}")
-        ser = None
-        current_port = None
-
-
-def get_ser():
-    global ser
-
-    if ser is None:
-        open_serial()
-        return ser
-
-    try:
-        ser.in_waiting
-    except:
-        print("Serial lost — reconnecting...")
-        open_serial()
-
-    return ser
-
-
-def safe_ser_write(data):
-    with serial_lock:
-        try:
-            s = get_ser()
-            if s:
-                s.write(data)
-        except Exception as e:
-            print(f"Write failed: {e}")
-            open_serial()
-
-
-def serial_monitor():
-    global current_port
-
-    while True:
-        try:
-            port = find_arduino_port()
-
-            if port is None:
-                if ser:
-                    print("Arduino disconnected")
-                open_serial()
-                time.sleep(1)
-                continue
-
-            if port != current_port:
-                print(f"Port switch detected: {current_port} → {port}")
-                open_serial()
-
-        except Exception as e:
-            print(f"Serial monitor error: {e}")
-
-        time.sleep(1)
-
-
-threading.Thread(target=serial_monitor, daemon=True).start()
-
 # ---------------- FLASK APP ---------------- #
 
 app = Flask(__name__)
 
-# =========================
-# ✅ FIXED PATHS
-# =========================
 CSV_PATH = "/home/mert/app_gui/inventory_data/yolo_temp.csv"
-ARDUINO_LOG_PATH = "/home/mert/app_gui/inventory_data/arduino_log.csv"  # ✅ NEW
+
 
 # ---------------- UI ROUTES ---------------- #
 
@@ -159,93 +60,6 @@ def root():
 def inventory():
     return render_template("inventory.html")
 
-@app.route("/testing")
-def testing():
-    return render_template("testing.html")
-
-# ---------------- MOTOR ---------------- #
-
-motorFridge = '1\n'
-motorRoom = '2\n'
-motorStop = '3\n'
-
-
-@app.route("/motorfridge")
-def motor_fridge():
-    safe_ser_write(motorFridge.encode())
-    return "Running Fridge Motor", 200
-
-
-@app.route("/motorroom")
-def motor_room():
-    safe_ser_write(motorRoom.encode())
-    return "Running Room Motor", 200
-
-
-@app.route("/motorstop")
-def motor_stop():
-    safe_ser_write(motorStop.encode())
-    return "Stopping all motors", 200
-
-# ---------------- DEBUG SEQUENCE ---------------- #
-@app.route('/api/run-debug', methods=['POST'])
-def run_debug():
-    data = request.get_json()
-
-    if not data or 'action' not in data:
-        return jsonify({"message": "Invalid request"}), 400
-
-    if data['action'] == 'run_program':
-        try:
-            s = get_ser()
-            if not s:
-                return jsonify({"message": "Arduino not connected"}), 500
-
-            # -----------------------------
-            # STEP 1: FRIDGE MOTOR (5 sec)
-            # -----------------------------
-            print("Starting fridge motor")
-            safe_ser_write(motorFridge.encode())
-
-            for _ in range(50):  # 5 seconds (0.1 * 50)
-                time.sleep(0.1)
-                if not get_ser():
-                    return jsonify({"message": "Arduino disconnected during fridge test"}), 500
-
-            # STOP after fridge
-            safe_ser_write(motorStop.encode())
-            time.sleep(1)
-
-            # -----------------------------
-            # STEP 2: ROOM MOTOR (5 sec)
-            # -----------------------------
-            print("Starting room motor")
-            safe_ser_write(motorRoom.encode())
-
-            for _ in range(50):  # 5 seconds
-                time.sleep(0.1)
-                if not get_ser():
-                    return jsonify({"message": "Arduino disconnected during room test"}), 500
-
-            # STOP after room
-            safe_ser_write(motorStop.encode())
-            time.sleep(1)
-
-            # -----------------------------
-            # FINAL STOP (safety)
-            # -----------------------------
-            safe_ser_write(motorStop.encode())
-
-            return jsonify({
-                "message": "Test has finished or was ended early."
-            }), 200
-
-        except Exception as e:
-            traceback.print_exc()
-            return jsonify({"message": str(e)}), 500
-
-    return jsonify({"message": "Unknown action"}), 400
-    
 # ---------------- LED ---------------- #
 
 NUM_PIXELS = 16
@@ -312,10 +126,9 @@ def read_csv():
 
         df = pd.read_csv(CSV_PATH)
 
-        # ✅ DEBUG
         print("CSV COLUMNS:", df.columns.tolist())
 
-        expected_cols = ["Item", "Date In", "Expected Expiration"]
+        expected_cols = ["Item", "Date In", "Expiration"]
 
         for col in expected_cols:
             if col not in df.columns:
@@ -324,10 +137,10 @@ def read_csv():
         data = []
         for i, row in df.iterrows():
             data.append({
-                "id": int(i),            
+                "id": int(i),
                 "Item": str(row["Item"]),
                 "Date In": str(row["Date In"]),
-                "Expected Expiration": str(row["Expected Expiration"])
+                "Expiration": str(row["Expiration"])
             })
 
         return data
@@ -344,6 +157,15 @@ def get_json():
 def add_row():
     try:
         data = request.get_json()
+
+        # ✅ FIXED: format is now %m-%d-%y to match MM-DD-YY
+        date_in_str = data.get("Date In", "")
+        if date_in_str and not data.get("Expected Expiration"):
+            try:
+                date_in = datetime.strptime(date_in_str, "%m-%d-%y")
+                data["Expected Expiration"] = (date_in + timedelta(days=5)).strftime("%m-%d-%y")
+            except ValueError:
+                pass
 
         new_row = pd.DataFrame([{
             "Item": data.get("Item", ""),
@@ -398,28 +220,6 @@ def delete_row():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"message": "error"}), 500
-
-# ---------------- ✅ FIXED ARDUINO LOGGING ---------------- #
-
-def arduino_output():
-    s = get_ser()
-    if not s:
-        return
-
-    try:
-        data = s.readline().decode('utf-8', errors='ignore').strip()
-
-        if data:
-            readings = data.split(",")
-
-            # ✅ WRITE TO SEPARATE FILE (FIX)
-            with open(ARDUINO_LOG_PATH, 'a', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow(readings)
-
-    except Exception as e:
-        print(f"Read error: {e}")
-        open_serial()
 
 # ---------------- DEBUG ROUTE ---------------- #
 
