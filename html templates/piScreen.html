@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -41,7 +40,6 @@
             flex-direction: column;
         }
 
-        /* HEADER */
         .topbar {
             background: white;
             padding: 14px 16px;
@@ -58,7 +56,6 @@
             color: var(--accent);
         }
 
-        /* MAIN FULL HEIGHT */
         .main {
             flex: 1;
             padding: 12px;
@@ -75,23 +72,12 @@
             width: 100%;
         }
 
-        .card-header {
-            padding: 12px 14px;
-            background: var(--surface);
-            border-bottom: 1px solid var(--border);
-            font-size: 11px;
-            text-transform: uppercase;
-            color: var(--text-muted);
-            flex-shrink: 0;
-        }
-
         .card-body {
             flex: 1;
             padding: 12px;
             display: flex;
         }
 
-        /* FULLSCREEN GRID */
         .gas-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -130,45 +116,59 @@
 
 <body>
 
-    <!-- HEADER -->
     <div class="topbar">
         <div class="topbar-wordmark">Fridge <em>Sniffer</em></div>
     </div>
 
-    <!-- MAIN CONTENT -->
     <div class="main">
-   
-            <div class="card-body">
-                <div class="gas-grid">
 
-                    <div class="gas-box">
-                        <div class="gas-title">Temperature</div>
-                        <div class="gas-value">--</div>
-                    </div>
-   
-                    <div class="gas-box">
-                        <div class="gas-title">Ethanol</div>
-                        <div class="gas-value">--</div>
-                    </div>
+        <div class="card-body">
+            <div class="gas-grid">
 
-                    <div class="gas-box">
-                        <div class="gas-title">Ammonia</div>
-                        <div class="gas-value">--</div>
-                    </div>
-
-                    <div class="gas-box">
-                        <div class="gas-title">Hydrogen Sulfide</div>
-                        <div class="gas-value">--</div>
-                    </div>
-
-
-                    </div>
-
+                <div class="gas-box">
+                    <div class="gas-title">Temperature</div>
+                    <div class="gas-value" id="temp">--</div>
                 </div>
+
+                <div class="gas-box">
+                    <div class="gas-title">Ethanol</div>
+                    <div class="gas-value" id="ethanol">--</div>
+                </div>
+
+                <div class="gas-box">
+                    <div class="gas-title">Ammonia</div>
+                    <div class="gas-value" id="ammonia">--</div>
+                </div>
+
+                <div class="gas-box">
+                    <div class="gas-title">Hydrogen Sulfide</div>
+                    <div class="gas-value" id="h2s">--</div>
+                </div>
+
             </div>
         </div>
     </div>
 
+    <!-- ✅ LIVE DATA SCRIPT -->
+    <script>
+        async function loadGasData() {
+            try {
+                const res = await fetch('/api/gas-data');
+                const data = await res.json();
+
+                document.getElementById('temp').textContent = data.Temperature ?? '--';
+                document.getElementById('ethanol').textContent = data.Ethanol ?? '--';
+                document.getElementById('ammonia').textContent = data.Ammonia ?? '--';
+                document.getElementById('h2s').textContent = data["Hydrogen Sulfide"] ?? '--';
+
+            } catch (err) {
+                console.error("Gas data fetch failed:", err);
+            }
+        }
+
+        loadGasData();
+        setInterval(loadGasData, 2000);
+    </script>
+
 </body>
 </html>
-
