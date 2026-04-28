@@ -1,12 +1,12 @@
 from flask import Flask, request, jsonify, render_template, send_file
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta  # ✅ KEEP ONLY THIS, remove the bare "import datetime" below
 import socket
 import serial
 import csv
 import json
 import time, traceback
 import threading
-import datetime
+# ❌ REMOVED: import datetime  <-- this was overwriting the line above
 import cv2
 import board
 import neopixel_spi as neopixel
@@ -46,11 +46,8 @@ def publish(client, msg):
 
 app = Flask(__name__)
 
-# =========================
-# ✅ FIXED PATHS
-# =========================
 CSV_PATH = "/home/mert/app_gui/inventory_data/yolo_temp.csv"
-ARDUINO_LOG_PATH = "/home/mert/app_gui/inventory_data/arduino_log.csv"  # ✅ NEW
+ARDUINO_LOG_PATH = "/home/mert/app_gui/inventory_data/arduino_log.csv"
 
 # ---------------- UI ROUTES ---------------- #
 
@@ -129,7 +126,6 @@ def read_csv():
 
         df = pd.read_csv(CSV_PATH)
 
-        # ✅ DEBUG
         print("CSV COLUMNS:", df.columns.tolist())
 
         expected_cols = ["Item", "Date In", "Expected Expiration"]
@@ -141,7 +137,7 @@ def read_csv():
         data = []
         for i, row in df.iterrows():
             data.append({
-                "id": int(i),            
+                "id": int(i),
                 "Item": str(row["Item"]),
                 "Date In": str(row["Date In"]),
                 "Expected Expiration": str(row["Expected Expiration"])
@@ -162,12 +158,12 @@ def add_row():
     try:
         data = request.get_json()
 
-        # ✅ ADD THIS BLOCK RIGHT HERE
+        # ✅ FIXED: format is now %m-%d-%y to match MM-DD-YY
         date_in_str = data.get("Date In", "")
         if date_in_str and not data.get("Expected Expiration"):
             try:
-                date_in = datetime.strptime(date_in_str, "%Y-%m-%d")
-                data["Expected Expiration"] = (date_in + timedelta(days=5)).strftime("%Y-%m-%d")
+                date_in = datetime.strptime(date_in_str, "%m-%d-%y")
+                data["Expected Expiration"] = (date_in + timedelta(days=5)).strftime("%m-%d-%y")
             except ValueError:
                 pass
 
@@ -176,14 +172,12 @@ def add_row():
             "Date In": data.get("Date In", ""),
             "Expected Expiration": data.get("Expected Expiration", "")
         }])
-        # ... rest unchanged
 
         if os.path.exists(CSV_PATH):
             df = pd.read_csv(CSV_PATH)
         else:
             df = pd.DataFrame(columns=["Item", "Date In", "Expected Expiration"])
 
-		
         df = pd.concat([df, new_row], ignore_index=True)
         df.to_csv(CSV_PATH, index=False)
 
@@ -242,4 +236,3 @@ def debug_csv():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
-    #,ssl_context=('cert.pem', 'key.pem')
