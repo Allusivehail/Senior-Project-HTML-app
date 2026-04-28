@@ -46,7 +46,7 @@ def publish(client, msg):
 app = Flask(__name__)
 
 CSV_PATH = "/home/mert/app_gui/inventory_data/yolo_temp.csv"
-GAS_PATH = "" # Future place for gas sensors csv file
+GAS_PATH = "/home/mert/fridge_project/PPMData.csv" # Future place for gas sensors csv file
 
 
 # ---------------- UI ROUTES ---------------- #
@@ -62,6 +62,13 @@ def root():
 @app.route("/inventory")
 def inventory():
     return render_template("inventory.html")
+    
+    
+@app.route("/screen")
+def inventory():
+    return render_template("piScreen.html")
+    
+   
 
 # ---------------- LED ---------------- #
 
