@@ -147,20 +147,20 @@
             overflow-y: auto;
         }
     </style>
+
 </head>
 
 <body>
 
 <!-- TOPBAR -->
 <header class="topbar">
-    <div class="topbar-wordmark">Dash<em>board</em></div>
+        <span class="topbar-wordmark">Fridge<em>Sniffer</em></span>
     <div>
         <a href="/"><button class="nav-btn">Home</button></a>
-        <a href="/inventory"><button class="nav-btn">Inventory</button></a>
     </div>
 </header>
 
-<div class="section-rule">Inventory Module</div>
+<div class="section-rule">Today's date is: </div>
 
 <div class="main">
 
@@ -176,8 +176,8 @@
             <h4>Add Item</h4>
 
             <input id="newItem" placeholder="Item">
-            <input id="newDate" placeholder="Date In">
-            <input id="newExp" placeholder="Expiration">
+	    <input id="newDate" placeholder="Date In" onblur="autoFillExpiration(this.value)">
+	    <input id="newExp" placeholder="Expiration" oninput="this.value = normalizeDate(this.value)">
 
             <button class="btn btn-primary" onclick="addRow()">Add</button>
 
@@ -227,7 +227,7 @@ async function loadJSON() {
             </td>
 
             <td contenteditable="true" onblur="updateRow(${row.id}, this)">
-                ${row["Expected Expiration"] || ""}
+                ${row["Expiration"] || ""}
             </td>
 
             <td>
@@ -253,7 +253,7 @@ async function updateRow(id, cell) {
             id: id,
             Item: c[0].innerText.trim(),
             "Date In": c[1].innerText.trim(),
-            "Expected Expiration": c[2].innerText.trim()
+            "Expiration": c[2].innerText.trim()
         })
     });
 }
@@ -266,7 +266,7 @@ async function addRow() {
         body: JSON.stringify({
             "Item": document.getElementById("newItem").value,
             "Date In": document.getElementById("newDate").value,
-            "Expected Expiration": document.getElementById("newExp").value
+            "Expiration": document.getElementById("newExp").value
         })
     });
 
@@ -275,6 +275,45 @@ async function addRow() {
     document.getElementById("newExp").value = "";
 
     loadJSON();
+}
+
+
+
+
+function normalizeDate(dateStr) {
+    if (!dateStr) return "";
+    // Convert slashes to dashes
+    return dateStr.replace(/\//g, "-");
+}
+
+function autoFillExpiration(dateStr) {
+    if (!dateStr) return;
+    const normalized = normalizeDate(dateStr);
+    document.getElementById("newDate").value = normalized;
+
+    const expField = document.getElementById("newExp");
+    if (expField.value.trim() !== "") return;
+
+    const parts = normalized.split("-");
+    if (parts.length !== 3) return;
+    const [mm, dd, yy] = parts;
+
+    console.log("DEBUG parts:", mm, dd, yy); // ✅ check this in browser console
+
+    const fullYear = parseInt(yy) < 100 ? 2000 + parseInt(yy) : parseInt(yy);
+    const d = new Date(fullYear, parseInt(mm) - 1, parseInt(dd));
+
+    if (isNaN(d.getTime())) return;
+
+    d.setDate(d.getDate() + 5);
+
+    const omm = String(d.getMonth() + 1).padStart(2, '0');
+    const odd = String(d.getDate()).padStart(2, '0');
+    const oyy = String(d.getFullYear()).slice(-2);
+
+    console.log("DEBUG result:", omm, odd, oyy); // ✅ check this too
+
+    expField.value = `${omm}-${odd}-${oyy}`;
 }
 
 // DELETE ROW
@@ -294,9 +333,55 @@ async function deleteRow(id) {
 // INIT
 window.onload = function () {
     loadJSON();
-    setInterval(loadJSON, 5000);
+    setInterval(loadJSON, 1000);
 };
 
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+
+<script>
+    if (Notification.permission !== "granted") {
+        Notification.requestPermission();
+    }
+
+    const client = new Paho.MQTT.Client("10.100.138.163", 8083, "clientId");
+
+    const connectOptions = {
+        onSuccess: onConnect,
+        useSSL: false,
+        userName: "testUser",
+        password: "pass"
+    };
+
+    client.onConnectionLost = onConnectionLost;
+    client.onMessageArrived = onMessageArrived;
+
+    client.connect(connectOptions);
+
+    function onConnect() {
+        console.log("Webpage connected to MQTT");
+        client.subscribe("tempAlert");
+	client.subscribe("sensorAlert");
+    }
+
+    function onConnectionLost(responseObject) {
+        if (responseObject.errorCode !== 0) {
+            console.log("onConnectionLost:" + responseObject.errorMessage);
+        }
+    }
+
+    function onMessageArrived(message) {
+        console.log("Message Arrived: " + message.payloadString);
+        if (Notification.permission === "granted") {
+            new Notification("New MQTT Message", {
+                body: message.payloadString,
+                icon: "https://cdn-icons-png.flaticon.com/512/1827/1827347.png"
+            });
+        } else {
+            alert("MQTT Message: " + message.payloadString);
+        }
+    }
 </script>
 
 </body>
