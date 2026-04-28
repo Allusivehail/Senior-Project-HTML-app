@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fridge Diagnostics</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --white: #ffffff;
+            --surface: #fafbfc;
+            --border: #e2e6ea;
+            --accent: #0069d9;
+            --text: #1a2332;
+            --text-mid: #4a5568;
+            --text-muted: #8a95a3;
+            --serif: 'Instrument Serif', serif;
+            --sans: 'DM Sans', sans-serif;
+            --mono: 'DM Mono', monospace;
+            --radius: 16px;
+            --shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .topbar {
+            background: white;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .topbar-wordmark {
+            font-family: var(--serif);
+            font-size: 20px;
+        }
+
+        .topbar-wordmark em {
+            color: var(--accent);
+        }
+
+        .main {
+            padding: 16px;
+        }
+
+        .card {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 12px 14px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .card-body {
+            padding: 14px;
+        }
+
+        /* 2x2 GRID FOR GASES */
+        .gas-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .gas-box {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .gas-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .gas-value {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text);
+        }
+
+    </style>
+</head>
+
+<body>
+
+<div class="topbar">
+    <div class="topbar-wordmark">Fridge <em>Sniffer</em></div>
+</div>
+
+<div class="main">
+
+    <div class="card">
+        <div class="card-header">Sensor Readings</div>
+
+        <div class="card-body">
+
+            <div class="gas-grid">
+
+                <div class="gas-box">
+                    <div class="gas-title">Temperature</div>
+                    <div class="gas-value">--</div>
+                </div>
+
+                <div class="gas-box">
+                    <div class="gas-title">Humidity</div>
+                    <div class="gas-value">--</div>
+                </div>
+
+                <div class="gas-box">
+                    <div class="gas-title">Ethanol</div>
+                    <div class="gas-value">--</div>
+                </div>
+
+                <div class="gas-box">
+                    <div class="gas-title">Ammonia</div>
+                    <div class="gas-value">--</div>
+                </div>
+
+                <div class="gas-box">
+                    <div class="gas-title">Hydrogen Sulfide</div>
+                    <div class="gas-value">--</div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>
