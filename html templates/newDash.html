@@ -394,16 +394,14 @@
 
 <header class="topbar">
     <div class="topbar-brand">
-        <span class="topbar-wordmark">Dash<em>board</em></span>
-        <span class="topbar-sub">Monitor</span>
+        <span class="topbar-wordmark">Fridge<em>Sniffer</em></span>
     </div>
     <nav class="topbar-nav">
-        <a href="/testing"><button class="nav-btn">Testing</button></a>
         <a href="/inventory"><button class="nav-btn">Inventory</button></a>
     </nav>
 </header>
 
-<div class="section-rule"><span>Modules</span></div>
+<div class="section-rule"><span>Welcome: Mr. XYZ</span></div>
 
 <div class="main">
 
@@ -509,7 +507,7 @@ async function captureImage() {
         Notification.requestPermission();
     }
 
-    const client = new Paho.MQTT.Client("10.100.138.163:8083", 8083, "clientId");
+    const client = new Paho.MQTT.Client("10.100.138.163", 8083, "clientId");
 
     const connectOptions = {
         onSuccess: onConnect,
@@ -526,6 +524,7 @@ async function captureImage() {
     function onConnect() {
         console.log("Webpage connected to MQTT");
         client.subscribe("tempAlert");
+	client.subscribe("sensorAlert");
     }
 
     function onConnectionLost(responseObject) {
@@ -537,7 +536,7 @@ async function captureImage() {
     function onMessageArrived(message) {
         console.log("Message Arrived: " + message.payloadString);
         if (Notification.permission === "granted") {
-            new Notification("New MQTT Message", {
+            new Notification("Alert!", {
                 body: message.payloadString,
                 icon: "https://cdn-icons-png.flaticon.com/512/1827/1827347.png"
             });
