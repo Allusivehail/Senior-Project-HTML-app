@@ -142,12 +142,19 @@
 </div>
 
 <script>
-    function normalizeData(data) {
+    // =========================
+    // CSV ORDER IS THE TRUTH
+    // 0 = Ethanol
+    // 1 = Ammonia
+    // 2 = Hydrogen Sulfide
+    // 3 = Temperature
+    // =========================
+    function normalizeData(raw) {
         return {
-            ethanol: data.ethanol ?? data.Ethanol,
-            ammonia: data.ammonia ?? data.Ammonia,
-            h2s: data["hydrogen sulfide"] ?? data["Hydrogen Sulfide"],
-            temp: data.temperature ?? data.Temperature
+            ethanol: parseFloat(raw[0]),
+            ammonia: parseFloat(raw[1]),
+            h2s: parseFloat(raw[2]),
+            temp: parseFloat(raw[3])
         };
     }
 
