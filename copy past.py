@@ -66,16 +66,6 @@
             display: flex;
         }
 
-        .card {
-            background: white;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            border: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-        }
-
         .card-body {
             flex: 1;
             padding: 12px;
@@ -119,83 +109,96 @@
 
 <body>
 
-    <div class="topbar">
-        <div class="topbar-wordmark">Fridge <em>Sniffer</em></div>
-    </div>
+<div class="topbar">
+    <div class="topbar-wordmark">Fridge <em>Sniffer</em></div>
+</div>
 
-    <div class="main">
+<div class="main">
+    <div class="card-body">
+        <div class="gas-grid">
 
-        <div class="card-body">
-            <div class="gas-grid">
-
-                <div class="gas-box">
-                    <div class="gas-title">Ethanol</div>
-                    <div class="gas-value" id="temp">--</div>
-                </div>
-
-                <div class="gas-box">
-                    <div class="gas-title">Ammonia</div>
-                    <div class="gas-value" id="ethanol">--</div>
-                </div>
-
-                <div class="gas-box">
-                    <div class="gas-title">Hydrogen Sulfide</div>
-                    <div class="gas-value" id="ammonia">--</div>
-                </div>
-
-                <div class="gas-box">
-                    <div class="gas-title">Temperature</div>
-                    <div class="gas-value" id="h2s">--</div>
-                </div>
-
+            <div class="gas-box">
+                <div class="gas-title">Ethanol</div>
+                <div class="gas-value" id="ethanol">--</div>
             </div>
+
+            <div class="gas-box">
+                <div class="gas-title">Ammonia</div>
+                <div class="gas-value" id="ammonia">--</div>
+            </div>
+
+            <div class="gas-box">
+                <div class="gas-title">Hydrogen Sulfide</div>
+                <div class="gas-value" id="h2s">--</div>
+            </div>
+
+            <div class="gas-box">
+                <div class="gas-title">Temperature</div>
+                <div class="gas-value" id="temp">--</div>
+            </div>
+
         </div>
     </div>
+</div>
 
-    <script>
-        function formatValue(val) {
-            if (val === null || val === undefined || isNaN(val)) return '--';
-            return parseFloat(val).toFixed(2);
+<script>
+    function normalizeData(data) {
+        return {
+            ethanol: data.ethanol ?? data.Ethanol,
+            ammonia: data.ammonia ?? data.Ammonia,
+            h2s: data["hydrogen sulfide"] ?? data["Hydrogen Sulfide"],
+            temp: data.temperature ?? data.Temperature
+        };
+    }
+
+    const thresholds = {
+        ethanol: { green: 5.0, yellow: 5.1, red: 10.0 },
+        ammonia: { green: 12.0, yellow: 12.1, red: 20.0 },
+        h2s:     { green: 3.0, yellow: 4.0, red: 5.0 },
+        temp:    { green: 40.0, yellow: 41.1, red: 55.0 }
+    };
+
+    function applyValue(id, value, t) {
+        const el = document.getElementById(id);
+
+        if (value === null || value === undefined || isNaN(value)) {
+            el.textContent = '--';
+            el.style.color = '';
+            return;
         }
 
-        function getColor(value, greenMax, yellowMax, redMin) {
-            if (value >= redMin) return "var(--red)";
-            if (value >= yellowMax) return "var(--yellow)";
-            return "var(--green)";
+        const v = Number(value);
+        el.textContent = v.toFixed(2);
+
+        if (v >= t.red) {
+            el.style.color = "var(--red)";
+        } else if (v >= t.yellow) {
+            el.style.color = "var(--yellow)";
+        } else {
+            el.style.color = "var(--green)";
         }
+    }
 
-        function applyValue(id, value, greenMax, yellowMax, redMin) {
-            const el = document.getElementById(id);
+    async function loadGasData() {
+        try {
+            const res = await fetch('/api/gas-data');
+            const raw = await res.json();
 
-            if (value === null || value === undefined || isNaN(value)) {
-                el.textContent = '--';
-                el.style.color = '';
-                return;
-            }
+            const data = normalizeData(raw);
 
-            el.textContent = parseFloat(value).toFixed(2);
-            el.style.color = getColor(value, greenMax, yellowMax, redMin);
+            applyValue('ethanol', data.ethanol, thresholds.ethanol);
+            applyValue('ammonia', data.ammonia, thresholds.ammonia);
+            applyValue('h2s', data.h2s, thresholds.h2s);
+            applyValue('temp', data.temp, thresholds.temp);
+
+        } catch (err) {
+            console.error("Gas data fetch failed:", err);
         }
+    }
 
-        async function loadGasData() {
-            try {
-                const res = await fetch('/api/gas-data');
-                const data = await res.json();
-
-                // IMPORTANT: Keeping your original ID mapping (no reordering)
-                applyValue('temp', data.Ethanol, 6.0, 9.0, 10.0);
-                applyValue('ethanol', data.Ammonia, 12.0, 19.0, 20.0);
-                applyValue('ammonia', data["Hydrogen Sulfide"], 3.0, 4.0, 5.0);
-                applyValue('h2s', data.Temperature, 40.0, 54.0, 55.0);
-
-            } catch (err) {
-                console.error("Gas data fetch failed:", err);
-            }
-        }
-
-        loadGasData();
-        setInterval(loadGasData, 2000);
-    </script>
+    loadGasData();
+    setInterval(loadGasData, 2000);
+</script>
 
 </body>
 </html>
