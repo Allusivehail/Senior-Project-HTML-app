@@ -26,15 +26,9 @@
             --red: #dc3545;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        html, body {
-            height: 100%;
-        }
+        html, body { height: 100%; }
 
         body {
             font-family: var(--sans);
@@ -86,7 +80,6 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 12px;
-
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -141,70 +134,84 @@
     </div>
 </div>
 
-<script>
-    // =========================
-    // CSV ORDER IS THE TRUTH
-    // 0 = Ethanol
-    // 1 = Ammonia
-    // 2 = Hydrogen Sulfide
-    // 3 = Temperature
-    // =========================
-    function normalizeData(raw) {
-        return {
-            ethanol: parseFloat(raw[0]),
-            ammonia: parseFloat(raw[1]),
-            h2s: parseFloat(raw[2]),
-            temp: parseFloat(raw[3])
-        };
-    }
+<!-- MQTT -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 
-    const thresholds = {
-        ethanol: { green: 5.0, yellow: 5.1, red: 10.0 },
-        ammonia: { green: 12.0, yellow: 12.1, red: 20.0 },
-        h2s:     { green: 3.0, yellow: 4.0, red: 5.0 },
-        temp:    { green: 40.0, yellow: 41.1, red: 55.0 }
+<script>
+    const client = new Paho.MQTT.Client("10.100.138.163", 8083, "fridge-ui-" + Math.random());
+
+    const options = {
+        onSuccess: onConnect,
+        useSSL: false,
+        userName: "testUser",
+        password: "pass"
     };
 
-    function applyValue(id, value, t) {
-        const el = document.getElementById(id);
+    client.onConnectionLost = onLost;
+    client.onMessageArrived = onMessage;
 
-        if (value === null || value === undefined || isNaN(value)) {
-            el.textContent = '--';
-            el.style.color = '';
+    client.connect(options);
+
+    function onConnect() {
+        console.log("MQTT connected");
+
+        client.subscribe("sensorAlert");
+        client.subscribe("tempAlert");
+        client.subscribe("gasData");
+    }
+
+    function onLost(res) {
+        console.log("MQTT lost:", res.errorMessage);
+    }
+
+    function onMessage(msg) {
+        console.log("MQTT:", msg.destinationName, msg.payloadString);
+
+        let data;
+
+        // Try JSON first
+        try {
+            data = JSON.parse(msg.payloadString);
+        } catch (e) {
             return;
         }
 
-        const v = Number(value);
-        el.textContent = v.toFixed(2);
+        // EXPECTED FORMAT:
+        // { Ethanol: 1.2, Ammonia: 3.4, HydrogenSulfide: 5.6, Temperature: 22 }
 
-        if (v >= t.red) {
-            el.style.color = "var(--red)";
-        } else if (v >= t.yellow) {
-            el.style.color = "var(--yellow)";
-        } else {
-            el.style.color = "var(--green)";
-        }
+        if (data.Ethanol !== undefined)
+            document.getElementById("ethanol").textContent = parseFloat(data.Ethanol).toFixed(2);
+
+        if (data.Ammonia !== undefined)
+            document.getElementById("ammonia").textContent = parseFloat(data.Ammonia).toFixed(2);
+
+        if (data.HydrogenSulfide !== undefined)
+            document.getElementById("h2s").textContent = parseFloat(data.HydrogenSulfide).toFixed(2);
+
+        if (data.Temperature !== undefined)
+            document.getElementById("temp").textContent = parseFloat(data.Temperature).toFixed(2);
     }
+</script>
 
-    async function loadGasData() {
-        try {
-            const res = await fetch('/api/gas-data');
-            const raw = await res.json();
+<!-- fallback REST polling (kept as backup) -->
+<script>
+async function loadGasData() {
+    try {
+        const res = await fetch('/api/gas-data');
+        const data = await res.json();
 
-            const data = normalizeData(raw);
+        document.getElementById("ethanol").textContent = data.Ethanol ?? "--";
+        document.getElementById("ammonia").textContent = data.Ammonia ?? "--";
+        document.getElementById("h2s").textContent = data["Hydrogen Sulfide"] ?? "--";
+        document.getElementById("temp").textContent = data.Temperature ?? "--";
 
-            applyValue('ethanol', data.ethanol, thresholds.ethanol);
-            applyValue('ammonia', data.ammonia, thresholds.ammonia);
-            applyValue('h2s', data.h2s, thresholds.h2s);
-            applyValue('temp', data.temp, thresholds.temp);
-
-        } catch (err) {
-            console.error("Gas data fetch failed:", err);
-        }
+    } catch (err) {
+        console.error("REST fallback failed:", err);
     }
+}
 
-    loadGasData();
-    setInterval(loadGasData, 2000);
+loadGasData();
+setInterval(loadGasData, 2000);
 </script>
 
 </body>
