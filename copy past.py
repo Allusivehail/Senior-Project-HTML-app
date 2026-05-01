@@ -20,6 +20,10 @@
             --mono: 'DM Mono', monospace;
             --radius: 16px;
             --shadow: 0 2px 10px rgba(0,0,0,0.08);
+
+            --green: #28a745;
+            --yellow: #ffc107;
+            --red: #dc3545;
         }
 
         * {
@@ -109,7 +113,6 @@
         .gas-value {
             font-size: 28px;
             font-weight: 600;
-            color: var(--text);
         }
     </style>
 </head>
@@ -149,17 +152,41 @@
         </div>
     </div>
 
-    <!-- ✅ LIVE DATA SCRIPT -->
     <script>
+        function formatValue(val) {
+            if (val === null || val === undefined || isNaN(val)) return '--';
+            return parseFloat(val).toFixed(2);
+        }
+
+        function getColor(value, greenMax, yellowMax, redMin) {
+            if (value >= redMin) return "var(--red)";
+            if (value >= yellowMax) return "var(--yellow)";
+            return "var(--green)";
+        }
+
+        function applyValue(id, value, greenMax, yellowMax, redMin) {
+            const el = document.getElementById(id);
+
+            if (value === null || value === undefined || isNaN(value)) {
+                el.textContent = '--';
+                el.style.color = '';
+                return;
+            }
+
+            el.textContent = parseFloat(value).toFixed(2);
+            el.style.color = getColor(value, greenMax, yellowMax, redMin);
+        }
+
         async function loadGasData() {
             try {
                 const res = await fetch('/api/gas-data');
                 const data = await res.json();
 
-                document.getElementById('temp').textContent = data.Temperature ?? '--';
-                document.getElementById('ethanol').textContent = data.Ethanol ?? '--';
-                document.getElementById('ammonia').textContent = data.Ammonia ?? '--';
-                document.getElementById('h2s').textContent = data["Hydrogen Sulfide"] ?? '--';
+                // IMPORTANT: Keeping your original ID mapping (no reordering)
+                applyValue('temp', data.Ethanol, 6.0, 9.0, 10.0);
+                applyValue('ethanol', data.Ammonia, 12.0, 19.0, 20.0);
+                applyValue('ammonia', data["Hydrogen Sulfide"], 3.0, 4.0, 5.0);
+                applyValue('h2s', data.Temperature, 40.0, 54.0, 55.0);
 
             } catch (err) {
                 console.error("Gas data fetch failed:", err);
