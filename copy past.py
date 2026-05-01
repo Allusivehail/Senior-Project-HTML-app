@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Inventory</title>
+    <title>Fridge Diagnostics</title>
 
-    <!-- FONTS -->
     <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 
     <style>
@@ -12,384 +11,199 @@
             --white: #ffffff;
             --surface: #fafbfc;
             --border: #e2e6ea;
-            --border-strong: #cdd3da;
             --accent: #0069d9;
-            --accent-light: #e8f0fb;
-            --accent-mid: #b8d0f5;
             --text: #1a2332;
             --text-mid: #4a5568;
             --text-muted: #8a95a3;
-            --mono: 'DM Mono', monospace;
             --serif: 'Instrument Serif', serif;
             --sans: 'DM Sans', sans-serif;
-            --radius: 10px;
-            --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+            --mono: 'DM Mono', monospace;
+            --radius: 16px;
+            --shadow: 0 2px 10px rgba(0,0,0,0.08);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; }
 
         body {
             font-family: var(--sans);
             background: var(--bg);
             color: var(--text);
+            display: flex;
+            flex-direction: column;
+            transition: background 0.3s;
+        }
+
+        body.alert-active {
+            animation: bgFlash 1s ease-in-out infinite;
+        }
+
+        @keyframes bgFlash {
+            0%   { background: var(--bg); }
+            50%  { background: #ffcccc; }
+            100% { background: var(--bg); }
         }
 
         .topbar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 36px;
-            height: 64px;
-            background: var(--white);
+            background: white;
+            padding: 14px 16px;
             border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        .topbar-wordmark {
-            font-family: var(--serif);
-            font-size: 22px;
-        }
-
+        .topbar-wordmark { font-family: var(--serif); font-size: 20px; }
         .topbar-wordmark em { color: var(--accent); }
 
-        .nav-btn {
-            padding: 7px 18px;
-            border: 1px solid var(--border-strong);
-            border-radius: 7px;
-            background: var(--surface);
-            cursor: pointer;
-            text-decoration: none;
-        }
-
-        .nav-btn:hover {
-            background: var(--accent-light);
-            color: var(--accent);
-        }
-
-        .section-rule {
-            padding: 20px 36px;
-            font-family: var(--mono);
-            font-size: 10px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
-
-        .main {
-            padding: 20px 36px;
-        }
-
-        .card {
-            background: var(--white);
-            border-radius: var(--radius);
-            border: 1px solid var(--border);
-            box-shadow: var(--shadow);
-        }
-
-        .card-header {
-            padding: 14px 20px;
-            border-bottom: 1px solid var(--border);
-            background: var(--surface);
-            font-size: 12px;
-            text-transform: uppercase;
-            color: var(--text-muted);
-        }
-
-        .card-body {
-            padding: 20px;
-        }
-
-        input {
-            padding: 8px;
-            margin-right: 8px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-        }
-
-        .btn {
-            padding: 8px 16px;
-            border-radius: 6px;
-            border: none;
-            cursor: pointer;
-        }
-
-        .btn-primary {
-            background: var(--accent);
+        .alert-banner {
+            display: none;
+            margin-left: auto;
+            background: #c0392b;
             color: white;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 5px 12px;
+            border-radius: 20px;
+            animation: bannerPulse 1s ease-in-out infinite;
         }
 
-        .btn-danger {
-            background: red;
-            color: white;
+        .alert-banner.visible { display: inline-block; }
+
+        @keyframes bannerPulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.5; }
         }
 
-        table {
+        .main { flex: 1; padding: 12px; display: flex; }
+
+        .card-body { flex: 1; padding: 12px; display: flex; }
+
+        .gas-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-auto-rows: 1fr;
+            gap: 12px;
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
+            height: 100%;
         }
 
-        th, td {
+        .gas-box {
+            background: var(--surface);
             border: 1px solid var(--border);
-            padding: 8px;
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
-        td[contenteditable="true"] {
-            background: #f9f9f9;
+        .gas-title {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 8px;
         }
 
-        .scroll-box {
-            max-height: 300px;
-            overflow-y: auto;
+        .gas-value {
+            font-size: 28px;
+            font-weight: 600;
+            color: var(--text);
+            transition: color 0.3s;
         }
     </style>
-
 </head>
 
 <body>
 
-<header class="topbar">
-    <span class="topbar-wordmark">Fridge<em>Sniffer</em></span>
-    <div>
-        <a href="/"><button class="nav-btn">Home</button></a>
+    <div class="topbar">
+        <div class="topbar-wordmark">Fridge <em>Sniffer</em></div>
+        <div class="alert-banner" id="alertBanner">⚠ Alert — Threshold Exceeded</div>
     </div>
-</header>
 
-<div class="section-rule">Today's date is: </div>
-
-<div class="main">
-
-    <div class="card">
-
-        <div class="card-header">
-            Inventory (Editable)
-        </div>
-
+    <div class="main">
         <div class="card-body">
+            <div class="gas-grid">
 
-            <h4>Add Item</h4>
+                <div class="gas-box">
+                    <div class="gas-title">Ethanol</div>
+                    <div class="gas-value" id="ethanol">--</div>
+                </div>
 
-            <!-- ✅ newDate uses onblur so full date is typed before parsing -->
-            <input id="newItem" placeholder="Item">
-            <input id="newDate" placeholder="Date In (MM-DD-YY)" onblur="autoFillExpiration(this.value)">
-            <input id="newExp" placeholder="Expiration" oninput="this.value = normalizeDate(this.value)">
+                <div class="gas-box">
+                    <div class="gas-title">Ammonia</div>
+                    <div class="gas-value" id="ammonia">--</div>
+                </div>
 
-            <button class="btn btn-primary" onclick="addRow()">Add</button>
+                <div class="gas-box">
+                    <div class="gas-title">Hydrogen Sulfide</div>
+                    <div class="gas-value" id="h2s">--</div>
+                </div>
 
-            <div class="scroll-box">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Date In</th>
-                            <th>Expiration</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="yoloBody"></tbody>
-                </table>
+                <div class="gas-box">
+                    <div class="gas-title">Temperature</div>
+                    <div class="gas-value" id="temp">--</div>
+                </div>
+
             </div>
-
         </div>
     </div>
 
-</div>
+    <script>
+        const THRESHOLDS = {
+            ethanol: { ok: 5,  warn: 9  },
+            ammonia: { ok: 12, warn: 19 },
+            h2s:     { ok: 2,  warn: 4  },
+            temp:    { ok: 40, warn: 54 },
+        };
 
-<script>
+        const COLOR = {
+            ok:     '#1a8a3a',
+            warn:   '#b45309',
+            danger: '#c0392b',
+        };
 
-// ✅ Tracks which items have already fired an MQTT alert this session
-const alertedItems = new Set();
+        function getStatus(value, t) {
+            if (typeof value !== 'number') return null;
+            if (value <= t.ok)   return 'ok';
+            if (value <= t.warn) return 'warn';
+            return 'danger';
+        }
 
-// LOAD TABLE
-async function loadJSON() {
-    const res = await fetch("/api/get-json");
-    const json = await res.json();
+        function updateSensor(elementId, value, thresholds) {
+            const el = document.getElementById(elementId);
+            el.textContent = value ?? '--';
+            const status = getStatus(value, thresholds);
+            el.style.color = status ? COLOR[status] : '';
+            return status === 'danger';
+        }
 
-    const data = json.data;
-    const table = document.getElementById("yoloBody");
-    table.innerHTML = "";
-
-    // ✅ Build today's date string in MM-DD-YY format for comparison
-    const today = new Date();
-    const todayMM = String(today.getMonth() + 1).padStart(2, '0');
-    const todayDD = String(today.getDate()).padStart(2, '0');
-    const todayYY = String(today.getFullYear()).slice(-2);
-    const todayStr = `${todayMM}-${todayDD}-${todayYY}`;
-
-    data.forEach(row => {
-        const tr = document.createElement("tr");
-
-        tr.innerHTML = `
-            <td contenteditable="true" onblur="updateRow(${row.id}, this)">
-                ${row.Item || ""}
-            </td>
-            <td contenteditable="true" onblur="updateRow(${row.id}, this)">
-                ${row["Date In"] || ""}
-            </td>
-            <td contenteditable="true" onblur="updateRow(${row.id}, this)">
-                ${row["Expected Expiration"] || ""}
-            </td>
-            <td>
-                <button class="btn btn-danger" onclick="deleteRow(${row.id})">
-                    Delete
-                </button>
-            </td>
-        `;
-
-        table.appendChild(tr);
-
-        // ✅ Fire MQTT alert if expiration matches today, once per item per session
-        const expDate = row["Expected Expiration"] ? row["Expected Expiration"].trim() : "";
-        if (expDate && expDate === todayStr && !alertedItems.has(row.id)) {
-            alertedItems.add(row.id);
-            const itemName = row.Item || "Unknown Item";
-            const msg = `ALERT: ${itemName} has expired today (${expDate})`;
-            console.log("Firing expiry MQTT:", msg);
+        async function loadGasData() {
             try {
-                const message = new Paho.MQTT.Message(msg);
-                message.destinationName = "sensorAlert";
-                client.send(message);
-            } catch (e) {
-                console.log("MQTT send error:", e);
+                const res  = await fetch('/api/gas-data');
+                const data = await res.json();
+
+                let anyDanger = false;
+                anyDanger |= updateSensor('ethanol', data.Ethanol,             THRESHOLDS.ethanol);
+                anyDanger |= updateSensor('ammonia', data.Ammonia,             THRESHOLDS.ammonia);
+                anyDanger |= updateSensor('h2s',     data["Hydrogen Sulfide"], THRESHOLDS.h2s);
+                anyDanger |= updateSensor('temp',    data.Temperature,         THRESHOLDS.temp);
+
+                document.body.classList.toggle('alert-active', !!anyDanger);
+                document.getElementById('alertBanner').classList.toggle('visible', !!anyDanger);
+
+            } catch (err) {
+                console.error("Gas data fetch failed:", err);
             }
         }
-    });
-}
 
-// UPDATE ROW
-async function updateRow(id, cell) {
-    const row = cell.parentElement;
-    const c = row.children;
-
-    await fetch("/api/update-row", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            id: id,
-            Item: c[0].innerText.trim(),
-            "Date In": c[1].innerText.trim(),
-            "Expected Expiration": c[2].innerText.trim()
-        })
-    });
-}
-
-// ADD ROW
-async function addRow() {
-    await fetch("/api/add-row", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            "Item": document.getElementById("newItem").value,
-            "Date In": document.getElementById("newDate").value,
-            "Expected Expiration": document.getElementById("newExp").value
-        })
-    });
-
-    document.getElementById("newItem").value = "";
-    document.getElementById("newDate").value = "";
-    document.getElementById("newExp").value = "";
-
-    loadJSON();
-}
-
-// NORMALIZE: convert slashes to dashes
-function normalizeDate(dateStr) {
-    if (!dateStr) return "";
-    return dateStr.replace(/\//g, "-");
-}
-
-// ✅ AUTO FILL EXPIRATION: triggered onblur so full date is available
-function autoFillExpiration(dateStr) {
-    if (!dateStr) return;
-    const normalized = normalizeDate(dateStr);
-    document.getElementById("newDate").value = normalized;
-
-    const expField = document.getElementById("newExp");
-    if (expField.value.trim() !== "") return; // don't overwrite if already filled
-
-    const parts = normalized.split("-");
-    if (parts.length !== 3) return;
-    const [mm, dd, yy] = parts;
-
-    const fullYear = parseInt(yy) < 100 ? 2000 + parseInt(yy) : parseInt(yy);
-    const d = new Date(fullYear, parseInt(mm) - 1, parseInt(dd));
-
-    if (isNaN(d.getTime())) return;
-
-    d.setDate(d.getDate() + 5);
-
-    const omm = String(d.getMonth() + 1).padStart(2, '0');
-    const odd = String(d.getDate()).padStart(2, '0');
-    const oyy = String(d.getFullYear()).slice(-2);
-
-    expField.value = `${omm}-${odd}-${oyy}`;
-}
-
-// DELETE ROW
-async function deleteRow(id) {
-    const confirmDelete = confirm("Are you sure you want to delete this row?");
-    if (!confirmDelete) return;
-
-    await fetch("/api/delete-row", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ id: id })
-    });
-
-    loadJSON();
-}
-
-// INIT
-window.onload = function () {
-    loadJSON();
-    setInterval(loadJSON, 1000);
-};
-
-</script>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
-
-<script>
-    if (Notification.permission !== "granted") {
-        Notification.requestPermission();
-    }
-
-    const client = new Paho.MQTT.Client("10.100.138.163", 8083, "clientId");
-
-    const connectOptions = {
-        onSuccess: onConnect,
-        useSSL: false,
-        userName: "testUser",
-        password: "pass"
-    };
-
-    client.onConnectionLost = onConnectionLost;
-    client.onMessageArrived = onMessageArrived;
-
-    client.connect(connectOptions);
-
-    function onConnect() {
-        console.log("Webpage connected to MQTT");
-        client.subscribe("tempAlert");
-        client.subscribe("sensorAlert");
-    }
-
-    function onConnectionLost(responseObject) {
-        if (responseObject.errorCode !== 0) {
-            console.log("onConnectionLost:" + responseObject.errorMessage);
-        }
-    }
-
-    function onMessageArrived(message) {
-        console.log("Message Arrived: " + message.payloadString);
-        if (Notification.permission === "granted") {
-            new Notification("New MQTT Message", {
-                body: message.payloadString,
-                icon: "https://cdn-icons-png.flaticon.com/512/1827/1827347.png"
-            });
-        } else {
-            alert("MQTT Message: " + message.payloadString);
-        }
-    }
-</script>
+        loadGasData();
+        setInterval(loadGasData, 2000);
+    </script>
 
 </body>
 </html>
