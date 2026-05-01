@@ -26,9 +26,15 @@
             --red: #dc3545;
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-        html, body { height: 100%; }
+        html, body {
+            height: 100%;
+        }
 
         body {
             font-family: var(--sans);
@@ -60,6 +66,16 @@
             display: flex;
         }
 
+        .card {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
         .card-body {
             flex: 1;
             padding: 12px;
@@ -80,6 +96,7 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 12px;
+
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -102,117 +119,82 @@
 
 <body>
 
-<div class="topbar">
-    <div class="topbar-wordmark">Fridge <em>Sniffer</em></div>
-</div>
+    <div class="topbar">
+        <div class="topbar-wordmark">Fridge <em>Sniffer</em></div>
+    </div>
 
-<div class="main">
-    <div class="card-body">
-        <div class="gas-grid">
+    <div class="main">
 
-            <div class="gas-box">
-                <div class="gas-title">Ethanol</div>
-                <div class="gas-value" id="ethanol">--</div>
+        <div class="card-body">
+            <div class="gas-grid">
+
+                <div class="gas-box">
+                    <div class="gas-title">Ethanol</div>
+                    <div class="gas-value" id="ethanol">--</div>
+                </div>
+
+                <div class="gas-box">
+                    <div class="gas-title">Ammonia</div>
+                    <div class="gas-value" id="ammonia">--</div>
+                </div>
+
+                <div class="gas-box">
+                    <div class="gas-title">Hydrogen Sulfide</div>
+                    <div class="gas-value" id="h2s">--</div>
+                </div>
+
+                <div class="gas-box">
+                    <div class="gas-title">Temperature</div>
+                    <div class="gas-value" id="temp">--</div>
+                </div>
+
             </div>
-
-            <div class="gas-box">
-                <div class="gas-title">Ammonia</div>
-                <div class="gas-value" id="ammonia">--</div>
-            </div>
-
-            <div class="gas-box">
-                <div class="gas-title">Hydrogen Sulfide</div>
-                <div class="gas-value" id="h2s">--</div>
-            </div>
-
-            <div class="gas-box">
-                <div class="gas-title">Temperature</div>
-                <div class="gas-value" id="temp">--</div>
-            </div>
-
         </div>
     </div>
-</div>
 
-<!-- MQTT -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
-
-<script>
-    const client = new Paho.MQTT.Client("10.100.138.163", 8083, "fridge-ui-" + Math.random());
-
-    const options = {
-        onSuccess: onConnect,
-        useSSL: false,
-        userName: "testUser",
-        password: "pass"
-    };
-
-    client.onConnectionLost = onLost;
-    client.onMessageArrived = onMessage;
-
-    client.connect(options);
-
-    function onConnect() {
-        console.log("MQTT connected");
-
-        client.subscribe("sensorAlert");
-        client.subscribe("tempAlert");
-        client.subscribe("gasData");
-    }
-
-    function onLost(res) {
-        console.log("MQTT lost:", res.errorMessage);
-    }
-
-    function onMessage(msg) {
-        console.log("MQTT:", msg.destinationName, msg.payloadString);
-
-        let data;
-
-        // Try JSON first
-        try {
-            data = JSON.parse(msg.payloadString);
-        } catch (e) {
-            return;
+    <script>
+        function formatValue(val) {
+            if (val === null || val === undefined || isNaN(val)) return '--';
+            return parseFloat(val).toFixed(2);
         }
 
-        // EXPECTED FORMAT:
-        // { Ethanol: 1.2, Ammonia: 3.4, HydrogenSulfide: 5.6, Temperature: 22 }
+        function getColor(value, greenMax, yellowMax, redMin) {
+            if (value >= redMin) return "var(--red)";
+            if (value >= yellowMax) return "var(--yellow)";
+            return "var(--green)";
+        }
 
-        if (data.Ethanol !== undefined)
-            document.getElementById("ethanol").textContent = parseFloat(data.Ethanol).toFixed(2);
+        function applyValue(id, value, greenMax, yellowMax, redMin) {
+            const el = document.getElementById(id);
 
-        if (data.Ammonia !== undefined)
-            document.getElementById("ammonia").textContent = parseFloat(data.Ammonia).toFixed(2);
+            if (value === null || value === undefined || isNaN(value)) {
+                el.textContent = '--';
+                el.style.color = '';
+                return;
+            }
 
-        if (data.HydrogenSulfide !== undefined)
-            document.getElementById("h2s").textContent = parseFloat(data.HydrogenSulfide).toFixed(2);
+            el.textContent = parseFloat(value).toFixed(2);
+            el.style.color = getColor(value, greenMax, yellowMax, redMin);
+        }
 
-        if (data.Temperature !== undefined)
-            document.getElementById("temp").textContent = parseFloat(data.Temperature).toFixed(2);
-    }
-</script>
+        async function loadGasData() {
+            try {
+                const res = await fetch('/api/gas-data');
+				const data = await res.json();
+		// Re-mapped values per your instruction
+		applyValue('ethanol', data.Temperature, 5.0, 5.1, 10.0);              // Ethanol ? Temp
+		applyValue('ammonia', data.Ethanol, 12.0, 12.1, 20.0);                // Ammonia ? Ethanol
+		applyValue('h2s', data.Ammonia, 3.0, 4.0, 5.0);                       // H2S ? Ammonia
+		applyValue('temp', data["Hydrogen Sulfide"], 40.0, 41.1, 55.0);       // Temp ? H2S
 
-<!-- fallback REST polling (kept as backup) -->
-<script>
-async function loadGasData() {
-    try {
-        const res = await fetch('/api/gas-data');
-        const data = await res.json();
+            } catch (err) {
+                console.error("Gas data fetch failed:", err);
+            }
+        }
 
-        document.getElementById("ethanol").textContent = data.Ethanol ?? "--";
-        document.getElementById("ammonia").textContent = data.Ammonia ?? "--";
-        document.getElementById("h2s").textContent = data["Hydrogen Sulfide"] ?? "--";
-        document.getElementById("temp").textContent = data.Temperature ?? "--";
-
-    } catch (err) {
-        console.error("REST fallback failed:", err);
-    }
-}
-
-loadGasData();
-setInterval(loadGasData, 2000);
-</script>
+        loadGasData();
+        setInterval(loadGasData, 2000);
+    </script>
 
 </body>
 </html>
