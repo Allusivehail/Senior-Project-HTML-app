@@ -22,8 +22,15 @@
             --shadow: 0 2px 10px rgba(0,0,0,0.08);
         }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        html, body { height: 100%; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100%;
+        }
 
         body {
             font-family: var(--sans);
@@ -31,17 +38,6 @@
             color: var(--text);
             display: flex;
             flex-direction: column;
-            transition: background 0.3s;
-        }
-
-        body.alert-active {
-            animation: bgFlash 1s ease-in-out infinite;
-        }
-
-        @keyframes bgFlash {
-            0%   { background: var(--bg); }
-            50%  { background: #ffcccc; }
-            100% { background: var(--bg); }
         }
 
         .topbar {
@@ -49,37 +45,38 @@
             padding: 14px 16px;
             border-bottom: 1px solid var(--border);
             flex-shrink: 0;
+        }
+
+        .topbar-wordmark {
+            font-family: var(--serif);
+            font-size: 20px;
+        }
+
+        .topbar-wordmark em {
+            color: var(--accent);
+        }
+
+        .main {
+            flex: 1;
+            padding: 12px;
             display: flex;
-            align-items: center;
-            gap: 12px;
         }
 
-        .topbar-wordmark { font-family: var(--serif); font-size: 20px; }
-        .topbar-wordmark em { color: var(--accent); }
-
-        .alert-banner {
-            display: none;
-            margin-left: auto;
-            background: #c0392b;
-            color: white;
-            font-size: 11px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            padding: 5px 12px;
-            border-radius: 20px;
-            animation: bannerPulse 1s ease-in-out infinite;
+        .card {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            width: 100%;
         }
 
-        .alert-banner.visible { display: inline-block; }
-
-        @keyframes bannerPulse {
-            0%, 100% { opacity: 1; }
-            50%       { opacity: 0.5; }
+        .card-body {
+            flex: 1;
+            padding: 12px;
+            display: flex;
         }
-
-        .main { flex: 1; padding: 12px; display: flex; }
-        .card-body { flex: 1; padding: 12px; display: flex; }
 
         .gas-grid {
             display: grid;
@@ -95,6 +92,7 @@
             border: 1px solid var(--border);
             border-radius: 12px;
             padding: 12px;
+
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -112,7 +110,6 @@
             font-size: 28px;
             font-weight: 600;
             color: var(--text);
-            transition: color 0.3s;
         }
     </style>
 </head>
@@ -121,10 +118,10 @@
 
     <div class="topbar">
         <div class="topbar-wordmark">Fridge <em>Sniffer</em></div>
-        <div class="alert-banner" id="alertBanner">⚠ Alert — Threshold Exceeded</div>
     </div>
 
     <div class="main">
+
         <div class="card-body">
             <div class="gas-grid">
 
@@ -152,64 +149,17 @@
         </div>
     </div>
 
+    <!-- ✅ LIVE DATA SCRIPT -->
     <script>
-        // The element IDs in this file are mismatched to their labels (legacy naming).
-        // Mapping: label "Ethanol" -> id="temp", label "Ammonia" -> id="ethanol",
-        //          label "H2S" -> id="ammonia", label "Temperature" -> id="h2s"
-        // We preserve those IDs and wire thresholds to match each label (not each ID).
-
-        const COLOR_OK     = '#1a8a3a';  // green
-        const COLOR_WARN   = '#b45309';  // amber
-        const COLOR_DANGER = '#c0392b';  // red
-
-        function colorFor(value, okMax, warnMax) {
-            if (typeof value !== 'number') return '';
-            if (value <= okMax)   return COLOR_OK;
-            if (value <= warnMax) return COLOR_WARN;
-            return COLOR_DANGER;
-        }
-
-        function isDanger(value, warnMax) {
-            return typeof value === 'number' && value > warnMax;
-        }
-
         async function loadGasData() {
             try {
-                const res  = await fetch('/api/gas-data');
+                const res = await fetch('/api/gas-data');
                 const data = await res.json();
 
-                const ethanol = data.Ethanol;           // shown in id="temp"
-                const ammonia = data.Ammonia;           // shown in id="ethanol"
-                const h2s     = data["Hydrogen Sulfide"]; // shown in id="ammonia"
-                const temp    = data.Temperature;       // shown in id="h2s"
-
-                // Ethanol: green <=5, yellow 6-9, red >=10
-                const elEthanol = document.getElementById('temp');
-                elEthanol.textContent = ethanol ?? '--';
-                elEthanol.style.color = colorFor(ethanol, 5, 9);
-
-                // Ammonia: green <=12, yellow 13-19, red >=20
-                const elAmmonia = document.getElementById('ethanol');
-                elAmmonia.textContent = ammonia ?? '--';
-                elAmmonia.style.color = colorFor(ammonia, 12, 19);
-
-                // Hydrogen Sulfide: green <=2, yellow 3-4, red >=5
-                const elH2S = document.getElementById('ammonia');
-                elH2S.textContent = h2s ?? '--';
-                elH2S.style.color = colorFor(h2s, 2, 4);
-
-                // Temperature: green <=40, yellow 41-54, red >=55
-                const elTemp = document.getElementById('h2s');
-                elTemp.textContent = temp ?? '--';
-                elTemp.style.color = colorFor(temp, 40, 54);
-
-                const anyDanger = isDanger(ethanol, 9)
-                               || isDanger(ammonia, 19)
-                               || isDanger(h2s, 4)
-                               || isDanger(temp, 54);
-
-                document.body.classList.toggle('alert-active', anyDanger);
-                document.getElementById('alertBanner').classList.toggle('visible', anyDanger);
+                document.getElementById('temp').textContent = data.Temperature ?? '--';
+                document.getElementById('ethanol').textContent = data.Ethanol ?? '--';
+                document.getElementById('ammonia').textContent = data.Ammonia ?? '--';
+                document.getElementById('h2s').textContent = data["Hydrogen Sulfide"] ?? '--';
 
             } catch (err) {
                 console.error("Gas data fetch failed:", err);
