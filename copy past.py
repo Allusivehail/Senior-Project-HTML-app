@@ -79,7 +79,6 @@
         }
 
         .main { flex: 1; padding: 12px; display: flex; }
-
         .card-body { flex: 1; padding: 12px; display: flex; }
 
         .gas-grid {
@@ -131,22 +130,22 @@
 
                 <div class="gas-box">
                     <div class="gas-title">Ethanol</div>
-                    <div class="gas-value" id="ethanol">--</div>
+                    <div class="gas-value" id="temp">--</div>
                 </div>
 
                 <div class="gas-box">
                     <div class="gas-title">Ammonia</div>
-                    <div class="gas-value" id="ammonia">--</div>
+                    <div class="gas-value" id="ethanol">--</div>
                 </div>
 
                 <div class="gas-box">
                     <div class="gas-title">Hydrogen Sulfide</div>
-                    <div class="gas-value" id="h2s">--</div>
+                    <div class="gas-value" id="ammonia">--</div>
                 </div>
 
                 <div class="gas-box">
                     <div class="gas-title">Temperature</div>
-                    <div class="gas-value" id="temp">--</div>
+                    <div class="gas-value" id="h2s">--</div>
                 </div>
 
             </div>
@@ -154,32 +153,24 @@
     </div>
 
     <script>
-        const THRESHOLDS = {
-            ethanol: { ok: 5,  warn: 9  },
-            ammonia: { ok: 12, warn: 19 },
-            h2s:     { ok: 2,  warn: 4  },
-            temp:    { ok: 40, warn: 54 },
-        };
+        // The element IDs in this file are mismatched to their labels (legacy naming).
+        // Mapping: label "Ethanol" -> id="temp", label "Ammonia" -> id="ethanol",
+        //          label "H2S" -> id="ammonia", label "Temperature" -> id="h2s"
+        // We preserve those IDs and wire thresholds to match each label (not each ID).
 
-        const COLOR = {
-            ok:     '#1a8a3a',
-            warn:   '#b45309',
-            danger: '#c0392b',
-        };
+        const COLOR_OK     = '#1a8a3a';  // green
+        const COLOR_WARN   = '#b45309';  // amber
+        const COLOR_DANGER = '#c0392b';  // red
 
-        function getStatus(value, t) {
-            if (typeof value !== 'number') return null;
-            if (value <= t.ok)   return 'ok';
-            if (value <= t.warn) return 'warn';
-            return 'danger';
+        function colorFor(value, okMax, warnMax) {
+            if (typeof value !== 'number') return '';
+            if (value <= okMax)   return COLOR_OK;
+            if (value <= warnMax) return COLOR_WARN;
+            return COLOR_DANGER;
         }
 
-        function updateSensor(elementId, value, thresholds) {
-            const el = document.getElementById(elementId);
-            el.textContent = value ?? '--';
-            const status = getStatus(value, thresholds);
-            el.style.color = status ? COLOR[status] : '';
-            return status === 'danger';
+        function isDanger(value, warnMax) {
+            return typeof value === 'number' && value > warnMax;
         }
 
         async function loadGasData() {
@@ -187,14 +178,38 @@
                 const res  = await fetch('/api/gas-data');
                 const data = await res.json();
 
-                let anyDanger = false;
-                anyDanger |= updateSensor('ethanol', data.Ethanol,             THRESHOLDS.ethanol);
-                anyDanger |= updateSensor('ammonia', data.Ammonia,             THRESHOLDS.ammonia);
-                anyDanger |= updateSensor('h2s',     data["Hydrogen Sulfide"], THRESHOLDS.h2s);
-                anyDanger |= updateSensor('temp',    data.Temperature,         THRESHOLDS.temp);
+                const ethanol = data.Ethanol;           // shown in id="temp"
+                const ammonia = data.Ammonia;           // shown in id="ethanol"
+                const h2s     = data["Hydrogen Sulfide"]; // shown in id="ammonia"
+                const temp    = data.Temperature;       // shown in id="h2s"
 
-                document.body.classList.toggle('alert-active', !!anyDanger);
-                document.getElementById('alertBanner').classList.toggle('visible', !!anyDanger);
+                // Ethanol: green <=5, yellow 6-9, red >=10
+                const elEthanol = document.getElementById('temp');
+                elEthanol.textContent = ethanol ?? '--';
+                elEthanol.style.color = colorFor(ethanol, 5, 9);
+
+                // Ammonia: green <=12, yellow 13-19, red >=20
+                const elAmmonia = document.getElementById('ethanol');
+                elAmmonia.textContent = ammonia ?? '--';
+                elAmmonia.style.color = colorFor(ammonia, 12, 19);
+
+                // Hydrogen Sulfide: green <=2, yellow 3-4, red >=5
+                const elH2S = document.getElementById('ammonia');
+                elH2S.textContent = h2s ?? '--';
+                elH2S.style.color = colorFor(h2s, 2, 4);
+
+                // Temperature: green <=40, yellow 41-54, red >=55
+                const elTemp = document.getElementById('h2s');
+                elTemp.textContent = temp ?? '--';
+                elTemp.style.color = colorFor(temp, 40, 54);
+
+                const anyDanger = isDanger(ethanol, 9)
+                               || isDanger(ammonia, 19)
+                               || isDanger(h2s, 4)
+                               || isDanger(temp, 54);
+
+                document.body.classList.toggle('alert-active', anyDanger);
+                document.getElementById('alertBanner').classList.toggle('visible', anyDanger);
 
             } catch (err) {
                 console.error("Gas data fetch failed:", err);
