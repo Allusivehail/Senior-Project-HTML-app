@@ -375,12 +375,15 @@
     <div class="topbar-brand">
         <span class="topbar-wordmark">Fridge<em>Sniffer</em></span>
     </div>
-    <nav class="topbar-nav">
-        <a href="/inventory"><button class="nav-btn">Inventory</button></a>
-    </nav>
+<nav class="topbar-nav">
+    <a href="/inventory"><button class="nav-btn">Inventory</button></a>
+    <a href="/logout"><button class="nav-btn">Logout</button></a>
+</nav>
 </header>
 
-<div class="section-rule"><span>Welcome: Mr. XYZ</span></div>
+<div class="section-rule">
+    <span>Welcome: {{ username }}</span>
+</div>
 
 <div class="main">
 
