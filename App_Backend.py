@@ -14,7 +14,7 @@ app.secret_key = "demo_secret_key"
 
 CSV_PATH = "/home/mert/app_gui/inventory_data/yolo_temp.csv"
 GAS_PATH = "/home/mert/fridge_project/PPMData.csv"
-IMAGE_PATH = "./static/IMG/http_test_image.png"
+IMAGE_PATH = "/home/mert/app_gui/captured_image.png"
 
 
 # ---------------- LOGIN ---------------- #
