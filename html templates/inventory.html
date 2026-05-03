@@ -355,23 +355,17 @@ function autoFillExpiration(dateStr) {
     if (parts.length !== 3) return;
     const [mm, dd, yy] = parts;
 
-    console.log("DEBUG parts:", mm, dd, yy);
+    // Guard: all three parts must be non-empty numbers
+    if (!mm || !dd || !yy) return;
+    const mmInt = parseInt(mm, 10);
+    const ddInt = parseInt(dd, 10);
+    const yyInt = parseInt(yy, 10);
+    if (isNaN(mmInt) || isNaN(ddInt) || isNaN(yyInt)) return;
 
-    const fullYear = parseInt(yy) < 100 ? 2000 + parseInt(yy) : parseInt(yy);
-    const d = new Date(fullYear, parseInt(mm) - 1, parseInt(dd));
+    const fullYear = yyInt < 100 ? 2000 + yyInt : yyInt;
+    const d = new Date(fullYear, mmInt - 1, ddInt);
 
     if (isNaN(d.getTime())) return;
-
-    d.setDate(d.getDate() + 5);
-
-    const omm = String(d.getMonth() + 1).padStart(2, '0');
-    const odd = String(d.getDate()).padStart(2, '0');
-    const oyy = String(d.getFullYear()).slice(-2);
-
-    console.log("DEBUG result:", omm, odd, oyy);
-
-    expField.value = `${omm}-${odd}-${oyy}`;
-}
 
 // ── init ───────────────────────────────────────────────────────────────────
 window.onload = function () {
