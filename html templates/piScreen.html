@@ -45,14 +45,14 @@
         }
 
         /* ===== RED ALERT FLASH ===== */
-        @keyframes redFlash {
-            0% { background-color: #ffffff; }
+        @keyframes boxRedFlash {
+            0% { background-color: var(--surface); }
             50% { background-color: #ff4d4d; }
-            100% { background-color: #ffffff; }
+            100% { background-color: var(--surface); }
         }
-
-        body.alert {
-            animation: redFlash 1.2s infinite;
+        
+        .gas-box.alert {
+            animation: boxRedFlash 1s infinite;
         }
 
         .topbar {
@@ -177,19 +177,29 @@
         // returns TRUE if value is in RED zone
         function applyValue(id, value, greenMax, yellowMax, redMin, unit = '') {
             const el = document.getElementById(id);
-
+        
             if (value === null || value === undefined || isNaN(value)) {
                 el.textContent = '--';
                 el.style.color = '';
+                el.parentElement.classList.remove("alert");
                 return false;
             }
-
+        
             const num = parseFloat(value);
-
+        
             el.textContent = num.toFixed(2) + unit;
             el.style.color = getColor(num, greenMax, yellowMax, redMin);
-
-            return num >= redMin;
+        
+            const isRed = num >= redMin;
+        
+            // 🔴 per-box flashing
+            if (isRed) {
+                el.parentElement.classList.add("alert");
+            } else {
+                el.parentElement.classList.remove("alert");
+            }
+        
+            return isRed;
         }
 
         async function loadGasData() {
