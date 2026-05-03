@@ -1,1 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
 
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --white: #ffffff;
+            --border: #e2e6ea;
+            --accent: #0069d9;
+            --text: #1a2332;
+            --mono: 'DM Mono', monospace;
+            --serif: 'Instrument Serif', serif;
+            --sans: 'DM Sans', sans-serif;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .card {
+            background: var(--white);
+            padding: 30px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .title {
+            font-family: var(--serif);
+            font-size: 22px;
+            margin-bottom: 15px;
+        }
+
+        .title em { color: var(--accent); }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: var(--accent);
+            color: white;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="title">Fridge<em>Sniffer</em></div>
+
+    <input id="username" placeholder="Username">
+    <input id="password" type="password" placeholder="Password">
+
+    <button onclick="login()">Login</button>
+
+    <div style="font-size:12px; margin-top:10px;">
+        admin / admin123<br>
+        john / doe123
+    </div>
+</div>
+
+<script>
+async function login() {
+    const res = await fetch("/api/login", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value
+        })
+    });
+
+    if (res.ok) {
+        window.location.href = "/";
+    } else {
+        alert("Invalid login");
+    }
+}
+</script>
+
+</body>
+</html>
