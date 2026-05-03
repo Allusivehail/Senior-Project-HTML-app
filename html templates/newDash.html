@@ -550,10 +550,11 @@ async function loadGasData() {
         const fmt = (val, unit) =>
             val != null ? `${parseFloat(val).toFixed(2)} ${unit}` : '--';
 
-        document.getElementById('tempVal').textContent    = fmt(data.Temperature,          '°F');
-        document.getElementById('ethanolVal').textContent = fmt(data.Ethanol,              'ppm');
-        document.getElementById('ammoniaVal').textContent = fmt(data.Ammonia,              'ppm');
-        document.getElementById('h2sVal').textContent     = fmt(data["Hydrogen Sulfide"],  'ppm');
+
+        document.getElementById('tempVal').textContent        = fmt(data.Temperature,          'PPM');
+        document.getElementById('ethanolVal').textContent     = fmt(data.Ethanol,              'PPM');
+        document.getElementById('ammoniaVal').textContent     = fmt(data.Ammonia,              'PPM');
+        document.getElementById('h2sVal').textContent         = fmt(data["Hydrogen Sulfide"],  'F');
 
     } catch (err) {
         console.error("Gas fetch error:", err);
