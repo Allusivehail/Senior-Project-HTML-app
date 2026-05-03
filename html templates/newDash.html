@@ -78,14 +78,6 @@
             color: var(--accent);
         }
 
-        .topbar-sub {
-            font-family: var(--mono);
-            font-size: 10px;
-            color: var(--text-muted);
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-        }
-
         .topbar-nav {
             display: flex;
             gap: 4px;
@@ -209,52 +201,55 @@
 
         .card-body { padding: 22px; }
 
-        .cam-actions {
+        /* ✅ CHANGED: replaced cam-actions button row with a status meta bar */
+        .cam-meta {
             display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
         }
 
-        .btn {
-            font-family: var(--sans);
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.04em;
-            padding: 9px 18px;
-            border-radius: 7px;
-            border: none;
-            cursor: pointer;
+        .live-badge {
             display: flex;
             align-items: center;
             gap: 7px;
-            transition: all 0.15s;
+            font-family: var(--mono);
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
         }
 
-        .btn svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; flex-shrink: 0; }
-
-        .btn-primary {
-            background: var(--accent);
-            color: #fff;
-            box-shadow: 0 1px 3px rgba(0,105,217,0.28), 0 3px 10px rgba(0,105,217,0.14);
+        /* ✅ NEW: animated live indicator dot */
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border-strong);
+            flex-shrink: 0;
+            transition: background 0.3s, box-shadow 0.3s;
         }
 
-        .btn-primary:hover {
-            background: #0057b8;
-            box-shadow: 0 2px 6px rgba(0,105,217,0.35), 0 6px 18px rgba(0,105,217,0.18);
-            transform: translateY(-1px);
+        .live-dot.active {
+            background: #22c55e;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+            animation: pulse 2s infinite;
         }
 
-        .btn-ghost {
-            background: transparent;
-            color: var(--text-mid);
-            border: 1px solid var(--border-strong);
+        .live-dot.stale {
+            background: #f59e0b;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
         }
 
-        .btn-ghost:hover {
-            background: var(--surface);
-            border-color: var(--text-muted);
-            color: var(--text);
-            transform: translateY(-1px);
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.5; }
+        }
+
+        .last-updated {
+            font-family: var(--mono);
+            font-size: 10px;
+            color: var(--text-muted);
+            letter-spacing: 0.06em;
         }
 
         .cam-viewport {
@@ -299,15 +294,6 @@
             display: none;
         }
 
-        .cam-status {
-            margin-top: 10px;
-            font-family: var(--mono);
-            font-size: 11px;
-            color: var(--accent);
-            min-height: 16px;
-            letter-spacing: 0.04em;
-        }
-
         .diag-grid {
             display: flex;
             flex-direction: column;
@@ -316,7 +302,7 @@
 
         .diag-row {
             display: grid;
-            grid-template-columns: 148px 1fr 68px;
+            grid-template-columns: 148px 1fr 80px;
             align-items: center;
             gap: 14px;
             padding: 11px 14px;
@@ -408,15 +394,16 @@
             <span class="card-tag">CAM-01</span>
         </div>
         <div class="card-body">
-            <div class="cam-actions">
-                <button class="btn btn-primary" onclick="captureImage()">
-                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M20 4h-3.17L15 2H9L7.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2z"/></svg>
-                    Take Picture
-                </button>
-                <button class="btn btn-ghost" onclick="loadImage()">
-                    <svg viewBox="0 0 24 24"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
-                    Refresh
-                </button>
+
+            <!-- ✅ CHANGED: removed "Take Picture" and "Refresh" buttons entirely.
+                 The camera is triggered exclusively by the Python GPIO script.
+                 This bar shows live polling status instead. -->
+            <div class="cam-meta">
+                <div class="live-badge">
+                    <div class="live-dot" id="liveDot"></div>
+                    <span id="liveLabel">Waiting for image…</span>
+                </div>
+                <span class="last-updated" id="lastUpdated"></span>
             </div>
 
             <div class="cam-viewport">
@@ -426,7 +413,7 @@
                 </div>
                 <img id="cam" alt="Camera feed">
             </div>
-            <p class="cam-status" id="cameraStatus"></p>
+
         </div>
     </div>
 
@@ -444,25 +431,25 @@
                 <div class="diag-row">
                     <div class="diag-label"><div class="diag-dot"></div>Ethanol</div>
                     <div class="diag-bar-track"><div class="diag-bar-fill" id="tempBar"></div></div>
-                    <div class="diag-value" id="tempVal">--</div>  <!-- ✅ ID ADDED -->
+                    <div class="diag-value" id="tempVal">--</div>
                 </div>
 
                 <div class="diag-row">
                     <div class="diag-label"><div class="diag-dot"></div>Ammonia</div>
                     <div class="diag-bar-track"><div class="diag-bar-fill" id="ethanolBar"></div></div>
-                    <div class="diag-value" id="ethanolVal">--</div>  <!-- ✅ ID ADDED -->
+                    <div class="diag-value" id="ethanolVal">--</div>
                 </div>
 
                 <div class="diag-row">
                     <div class="diag-label"><div class="diag-dot"></div>Hydrogen Sulfide</div>
                     <div class="diag-bar-track"><div class="diag-bar-fill" id="ammoniaBar"></div></div>
-                    <div class="diag-value" id="ammoniaVal">--</div>  <!-- ✅ ID ADDED -->
+                    <div class="diag-value" id="ammoniaVal">--</div>
                 </div>
 
                 <div class="diag-row">
                     <div class="diag-label"><div class="diag-dot"></div>Temperature</div>
                     <div class="diag-bar-track"><div class="diag-bar-fill" id="h2sBar"></div></div>
-                    <div class="diag-value" id="h2sVal">--</div>  <!-- ✅ ID ADDED -->
+                    <div class="diag-value" id="h2sVal">--</div>
                 </div>
 
             </div>
@@ -471,26 +458,62 @@
 
 </div>
 
-<!-- CAMERA SCRIPT -->
+<!-- ✅ CHANGED: replaced the old loadImage()/captureImage() scripts with a
+     passive polling loop. Every 3 s it does a cheap HEAD request to
+     /api/latest-image and compares the Last-Modified header. The <img> tag
+     is only updated when the file on disk has actually changed, avoiding
+     unnecessary reloads. After 15 s with no new image the dot turns amber. -->
 <script>
-function loadImage() {
-    const img = document.getElementById("cam");
-    const placeholder = document.getElementById("camPlaceholder");
-    img.src = "/static/IMG/http_test_image.png?rand=" + Math.random();
-    img.style.display = "block";
-    if (placeholder) placeholder.style.display = "none";
-}
+(function () {
+    const img         = document.getElementById('cam');
+    const placeholder = document.getElementById('camPlaceholder');
+    const liveDot     = document.getElementById('liveDot');
+    const liveLabel   = document.getElementById('liveLabel');
+    const lastUpdated = document.getElementById('lastUpdated');
 
-async function captureImage() {
-    const res = await fetch("/api/capture-image");
-    const data = await res.json();
-    document.getElementById("cameraStatus").innerText = data.message;
-    const img = document.getElementById("cam");
-    const placeholder = document.getElementById("camPlaceholder");
-    img.src = "/static/IMG/http_test_image.png?rand=" + Math.random();
-    img.style.display = "block";
-    if (placeholder) placeholder.style.display = "none";
-}
+    let lastModified = null;
+    let staleTimer   = null;
+
+    function fmtTime(d) {
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    function markStale() {
+        liveDot.className     = 'live-dot stale';
+        liveLabel.textContent = 'No new capture';
+    }
+
+    async function pollImage() {
+        try {
+            const head = await fetch('/api/latest-image', { method: 'HEAD', cache: 'no-store' });
+
+            if (!head.ok) return; // 404 = no image yet, keep waiting silently
+
+            const modified = head.headers.get('Last-Modified');
+
+            if (modified !== lastModified) {
+                lastModified = modified;
+
+                // Cache-bust so the browser fetches the new file
+                img.src           = '/api/latest-image?t=' + Date.now();
+                img.style.display = 'block';
+                placeholder.style.display = 'none';
+
+                liveDot.className     = 'live-dot active';
+                liveLabel.textContent = 'Live';
+                lastUpdated.textContent = 'Updated ' + fmtTime(new Date());
+
+                clearTimeout(staleTimer);
+                staleTimer = setTimeout(markStale, 15000);
+            }
+        } catch (err) {
+            console.warn('Image poll error:', err);
+        }
+    }
+
+    pollImage();
+    setInterval(pollImage, 3000);
+})();
 </script>
 
 <!-- MQTT -->
@@ -539,7 +562,7 @@ async function captureImage() {
     }
 </script>
 
-<!-- ✅ GAS DATA FETCH -->
+<!-- GAS DATA FETCH (unchanged) -->
 <script>
 async function loadGasData() {
     try {
@@ -550,11 +573,10 @@ async function loadGasData() {
         const fmt = (val, unit) =>
             val != null ? `${parseFloat(val).toFixed(2)} ${unit}` : '--';
 
-
-        document.getElementById('tempVal').textContent        = fmt(data.Temperature,          'PPM');
-        document.getElementById('ethanolVal').textContent     = fmt(data.Ethanol,              'PPM');
-        document.getElementById('ammoniaVal').textContent     = fmt(data.Ammonia,              'PPM');
-        document.getElementById('h2sVal').textContent         = fmt(data["Hydrogen Sulfide"],  'F');
+        document.getElementById('tempVal').textContent       = fmt(data.Temperature,         '°F');
+        document.getElementById('ethanolVal').textContent    = fmt(data.Ethanol,             'PPM');
+        document.getElementById('ammoniaVal').textContent    = fmt(data.Ammonia,             'PPM');
+        document.getElementById('h2sVal').textContent        = fmt(data["Hydrogen Sulfide"], 'PPM');
 
     } catch (err) {
         console.error("Gas fetch error:", err);
