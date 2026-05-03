@@ -164,7 +164,7 @@
             return "var(--green)";
         }
 
-        function applyValue(id, value, greenMax, yellowMax, redMin) {
+        function applyValue(id, value, greenMax, yellowMax, redMin, unit = '') {
             const el = document.getElementById(id);
 
             if (value === null || value === undefined || isNaN(value)) {
@@ -173,7 +173,7 @@
                 return;
             }
 
-            el.textContent = parseFloat(value).toFixed(2);
+            el.textContent = parseFloat(value).toFixed(2) + unit;
             el.style.color = getColor(value, greenMax, yellowMax, redMin);
         }
 
@@ -182,10 +182,10 @@
                 const res = await fetch('/api/gas-data');
 				const data = await res.json();
 		// Re-mapped values per your instruction
-		applyValue('ethanol', data.Temperature, 5.0, 5.1, 10.0);              // Ethanol ? Temp
-		applyValue('ammonia', data.Ethanol, 12.0, 12.1, 20.0);                // Ammonia ? Ethanol
-		applyValue('h2s', data.Ammonia, 3.0, 4.0, 5.0);                       // H2S ? Ammonia
-		applyValue('temp', data["Hydrogen Sulfide"], 40.0, 41.1, 55.0);       // Temp ? H2S
+		applyValue('ethanol', data.Temperature, 5.0, 5.1, 10.0, " PPM");              // Ethanol ? Temp
+		applyValue('ammonia', data.Ethanol, 12.0, 12.1, 20.0, " PPM");                // Ammonia ? Ethanol
+		applyValue('h2s', data.Ammonia, 3.0, 4.0, 5.0, " PPM");                       // H2S ? Ammonia
+		applyValue('temp', data["Hydrogen Sulfide"], 40.0, 41.1, 55.0, " F");       // Temp ? H2S
 
             } catch (err) {
                 console.error("Gas data fetch failed:", err);
