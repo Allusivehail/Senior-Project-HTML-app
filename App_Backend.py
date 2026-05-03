@@ -1,70 +1,78 @@
-from flask import Flask, request, jsonify, render_template, send_file
+from flask import Flask, request, jsonify, render_template, send_file, redirect, url_for, session
 from datetime import datetime, timedelta
-import socket
-import serial
-import csv
-import json
 import time, traceback
-import threading
 import cv2
 import board
 import neopixel_spi as neopixel
 import os
-import glob
 import pandas as pd
 from paho.mqtt import client as mqtt_client
 
 
-# ---------------- MQTT ---------------- #
-
-def connect_mqtt():
-    def on_connect(client, userdata, flags, rc):
-        if rc == 0:
-            print("Connected to MQTT Broker!")
-        else:
-            print("Failed to connect, return code %d\n", rc)
-
-    client = mqtt_client.Client(
-        client_id=client_id,
-        callback_api_version=mqtt_client.CallbackAPIVersion.VERSION2
-    )
-    client.username_pw_set(username, password)
-    client.on_connect = on_connect
-    client.connect(broker, port)
-    return client
-
-
-def publish(client, msg):
-    result = client.publish(topic, msg)
-    if result[0] == 0:
-        print(f"Send `{msg}` to topic `{topic}`")
-    else:
-        print(f"Failed to send message to topic {topic}")
-
-# ---------------- FLASK APP ---------------- #
-
 app = Flask(__name__)
+app.secret_key = "demo_secret_key"
 
 CSV_PATH = "/home/mert/app_gui/inventory_data/yolo_temp.csv"
 GAS_PATH = "/home/mert/fridge_project/PPMData.csv"
-
-# ✅ CHANGED: single source-of-truth for the captured image path
 IMAGE_PATH = "./static/IMG/http_test_image.png"
+
+
+# ---------------- LOGIN ---------------- #
+
+@app.route("/login")
+def login_page():
+    return render_template("login.html")
+
+
+@app.route("/api/login", methods=["POST"])
+def login():
+    data = request.get_json()
+
+    username = data.get("username")
+    password = data.get("password")
+
+    users = {
+        "admin": "admin123",
+        "john": "doe123"
+    }
+
+    if username in users and users[username] == password:
+        session["user"] = username
+        return jsonify({"success": True}), 200
+    else:
+        return jsonify({"success": False}), 401
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login_page"))
 
 
 # ---------------- UI ROUTES ---------------- #
 
 @app.route("/")
 def root():
-    return render_template("newDash.html")
+    if "user" not in session:
+        return redirect(url_for("login_page"))
+
+    return render_template("newDash.html", username=session["user"])
+
 
 @app.route("/inventory")
 def inventory():
-    return render_template("inventory.html")
+    if "user" not in session:
+        return redirect(url_for("login_page"))
+
+    return render_template("inventory.html", username=session["user"])
+
 
 @app.route("/screen")
 def screen():
-    return render_template("piScreen.html")
+    if "user" not in session:
+        return redirect(url_for("login_page"))
+
+    return render_template("piScreen.html", username=session["user"])
 
 
 # ---------------- LED ---------------- #
@@ -75,11 +83,8 @@ WHITE = 0xFFFFFF
 OFF = 0x000000
 
 spi = board.SPI()
-pixels = neopixel.NeoPixel_SPI(
-    spi, NUM_PIXELS,
-    pixel_order=PIXEL_ORDER,
-    auto_write=False
-)
+pixels = neopixel.NeoPixel_SPI(spi, NUM_PIXELS, pixel_order=PIXEL_ORDER, auto_write=False)
+
 
 # ---------------- CAMERA ---------------- #
 
@@ -95,154 +100,22 @@ def cameraTrigger():
     ret, frame = cap.read()
 
     if ret:
-        cv2.imwrite(IMAGE_PATH, frame)  # ✅ CHANGED: uses shared IMAGE_PATH constant
+        cv2.imwrite(IMAGE_PATH, frame)
 
     pixels.fill(OFF)
     pixels.show()
     cap.release()
 
 
-# ✅ CHANGED: kept for direct browser use / backward compat, but now uses IMAGE_PATH
-@app.route("/imageShow")
-def image_show():
-    return send_file(IMAGE_PATH, mimetype='image/png')
-
-
-@app.route('/api/capture-image')
-def capture_image():
-    try:
-        cameraTrigger()
-        image_url = request.host_url + "static/IMG/http_test_image.png"
-        return jsonify({
-            "message": "Image captured successfully",
-            "image_url": image_url
-        }), 200
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({"message": str(e)}), 500
-
-
-# ✅ NEW: polling endpoint used by the dashboard to get the latest captured image.
-#         The Python camera script writes to IMAGE_PATH independently; this route
-#         just serves whatever is on disk with proper Last-Modified headers so the
-#         frontend can detect when a new capture has arrived without re-downloading
-#         the same image every 3 seconds.
 @app.route('/api/latest-image')
 def latest_image():
     if not os.path.exists(IMAGE_PATH):
         return jsonify({"error": "No image captured yet"}), 404
 
-    return send_file(
-        IMAGE_PATH,
-        mimetype='image/png',
-        conditional=True   # ✅ Flask sets Last-Modified + honours If-Modified-Since
-    )
+    return send_file(IMAGE_PATH, mimetype='image/png', conditional=True)
 
 
-# ---------------- CSV read in ---------------- #
-
-def read_csv():
-    try:
-        if not os.path.exists(CSV_PATH):
-            print("CSV NOT FOUND:", CSV_PATH)
-            return []
-
-        df = pd.read_csv(CSV_PATH)
-        print("CSV COLUMNS:", df.columns.tolist())
-
-        expected_cols = ["Item", "Date In", "Expiration"]
-        for col in expected_cols:
-            if col not in df.columns:
-                df[col] = ""
-
-        data = []
-        for i, row in df.iterrows():
-            data.append({
-                "id": int(i),
-                "Item": str(row["Item"]),
-                "Date In": str(row["Date In"]),
-                "Expiration": str(row["Expiration"])
-            })
-
-        return data
-
-    except Exception as e:
-        print("CSV ERROR:", e)
-        return []
-
-
-@app.route('/api/get-json')
-def get_json():
-    return jsonify({"data": read_csv()}), 200
-
-
-@app.route('/api/add-row', methods=['POST'])
-def add_row():
-    try:
-        data = request.get_json()
-
-        date_in_str = data.get("Date In", "")
-        if date_in_str and not data.get("Expected Expiration"):
-            try:
-                date_in = datetime.strptime(date_in_str, "%m-%d-%y")
-                data["Expected Expiration"] = (date_in + timedelta(days=5)).strftime("%m-%d-%y")
-            except ValueError:
-                pass
-
-        new_row = pd.DataFrame([{
-            "Item": data.get("Item", ""),
-            "Date In": data.get("Date In", ""),
-            "Expected Expiration": data.get("Expected Expiration", "")
-        }])
-
-        if os.path.exists(CSV_PATH):
-            df = pd.read_csv(CSV_PATH)
-        else:
-            df = pd.DataFrame(columns=["Item", "Date In", "Expected Expiration"])
-
-        df = pd.concat([df, new_row], ignore_index=True)
-        df.to_csv(CSV_PATH, index=False)
-
-        return jsonify({"message": "added"}), 200
-
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({"message": "error"}), 500
-
-
-@app.route('/api/update-row', methods=['POST'])
-def update_row():
-    try:
-        data = request.get_json()
-
-        df = pd.read_csv(CSV_PATH)
-        df.at[data["id"], "Item"] = data["Item"]
-        df.at[data["id"], "Date In"] = data["Date In"]
-        df.at[data["id"], "Expected Expiration"] = data["Expected Expiration"]
-        df.to_csv(CSV_PATH, index=False)
-
-        return jsonify({"message": "updated"}), 200
-
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({"message": "error"}), 500
-
-
-@app.route('/api/delete-row', methods=['POST'])
-def delete_row():
-    try:
-        data = request.get_json()
-
-        df = pd.read_csv(CSV_PATH)
-        df = df.drop(index=data["id"]).reset_index(drop=True)
-        df.to_csv(CSV_PATH, index=False)
-
-        return jsonify({"message": "deleted"}), 200
-
-    except Exception as e:
-        traceback.print_exc()
-        return jsonify({"message": "error"}), 500
-
+# ---------------- GAS ---------------- #
 
 @app.route('/api/gas-data')
 def gas_data():
@@ -254,18 +127,16 @@ def gas_data():
         last = df.iloc[-1]
 
         return jsonify({
-            "Temperature":       str(last[0]) if len(last) > 0 else "--",
-            "Ethanol":           str(last[1]) if len(last) > 1 else "--",
-            "Ammonia":           str(last[2]) if len(last) > 2 else "--",
-            "Hydrogen Sulfide":  str(last[3]) if len(last) > 3 else "--"
+            "Temperature": str(last[0]) if len(last) > 0 else "--",
+            "Ethanol": str(last[1]) if len(last) > 1 else "--",
+            "Ammonia": str(last[2]) if len(last) > 2 else "--",
+            "Hydrogen Sulfide": str(last[3]) if len(last) > 3 else "--"
         }), 200
 
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
-
-# ---------------- Run flask server ---------------- #
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000, debug=True)
