@@ -389,9 +389,9 @@
         <div class="card-header">
             <div class="card-title">
                 <svg viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-                Camera
+                Fridge-View
             </div>
-            <span class="card-tag">CAM-01</span>
+
         </div>
         <div class="card-body">
 
@@ -399,11 +399,7 @@
                  The camera is triggered exclusively by the Python GPIO script.
                  This bar shows live polling status instead. -->
             <div class="cam-meta">
-                <div class="live-badge">
-                    <div class="live-dot" id="liveDot"></div>
-                    <span id="liveLabel">Waiting for imageâ€¦</span>
-                </div>
-                <span class="last-updated" id="lastUpdated"></span>
+
             </div>
 
             <div class="cam-viewport">
@@ -467,9 +463,7 @@
 (function () {
     const img         = document.getElementById('cam');
     const placeholder = document.getElementById('camPlaceholder');
-    const liveDot     = document.getElementById('liveDot');
-    const liveLabel   = document.getElementById('liveLabel');
-    const lastUpdated = document.getElementById('lastUpdated');
+
 
     let lastModified = null;
     let staleTimer   = null;
@@ -499,9 +493,6 @@
                 img.style.display = 'block';
                 placeholder.style.display = 'none';
 
-                liveDot.className     = 'live-dot active';
-                liveLabel.textContent = 'Live';
-                lastUpdated.textContent = 'Updated ' + fmtTime(new Date());
 
                 clearTimeout(staleTimer);
                 staleTimer = setTimeout(markStale, 15000);
