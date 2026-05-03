@@ -201,7 +201,7 @@
 
         .card-body { padding: 22px; }
 
-        /* ✅ CHANGED: replaced cam-actions button row with a status meta bar */
+        /* âœ… CHANGED: replaced cam-actions button row with a status meta bar */
         .cam-meta {
             display: flex;
             align-items: center;
@@ -219,7 +219,7 @@
             color: var(--text-muted);
         }
 
-        /* ✅ NEW: animated live indicator dot */
+        /* âœ… NEW: animated live indicator dot */
         .live-dot {
             width: 8px;
             height: 8px;
@@ -395,13 +395,13 @@
         </div>
         <div class="card-body">
 
-            <!-- ✅ CHANGED: removed "Take Picture" and "Refresh" buttons entirely.
+            <!-- âœ… CHANGED: removed "Take Picture" and "Refresh" buttons entirely.
                  The camera is triggered exclusively by the Python GPIO script.
                  This bar shows live polling status instead. -->
             <div class="cam-meta">
                 <div class="live-badge">
                     <div class="live-dot" id="liveDot"></div>
-                    <span id="liveLabel">Waiting for image…</span>
+                    <span id="liveLabel">Waiting for imageâ€¦</span>
                 </div>
                 <span class="last-updated" id="lastUpdated"></span>
             </div>
@@ -458,7 +458,7 @@
 
 </div>
 
-<!-- ✅ CHANGED: replaced the old loadImage()/captureImage() scripts with a
+<!-- âœ… CHANGED: replaced the old loadImage()/captureImage() scripts with a
      passive polling loop. Every 3 s it does a cheap HEAD request to
      /api/latest-image and compares the Last-Modified header. The <img> tag
      is only updated when the file on disk has actually changed, avoiding
@@ -512,7 +512,7 @@
     }
 
     pollImage();
-    setInterval(pollImage, 3000);
+    setInterval(pollImage, 1000);
 })();
 </script>
 
@@ -573,7 +573,7 @@ async function loadGasData() {
         const fmt = (val, unit) =>
             val != null ? `${parseFloat(val).toFixed(2)} ${unit}` : '--';
 
-        document.getElementById('tempVal').textContent       = fmt(data.Temperature,         '°F');
+        document.getElementById('tempVal').textContent       = fmt(data.Temperature,         'Â°F');
         document.getElementById('ethanolVal').textContent    = fmt(data.Ethanol,             'PPM');
         document.getElementById('ammoniaVal').textContent    = fmt(data.Ammonia,             'PPM');
         document.getElementById('h2sVal').textContent        = fmt(data["Hydrogen Sulfide"], 'PPM');
