@@ -65,7 +65,7 @@ def inventory():
     
     
 @app.route("/screen")
-def inventory():
+def screen():
     return render_template("piScreen.html")
     
    
