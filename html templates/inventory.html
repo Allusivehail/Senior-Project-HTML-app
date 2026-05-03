@@ -160,7 +160,8 @@
     </div>
 </header>
 
-<div class="section-rule">Today's date is: </div>
+<!-- ONLY CHANGE: added span id -->
+<div class="section-rule">Today's date is: <span id="todayDate"></span></div>
 
 <div class="main">
 
@@ -171,23 +172,21 @@
             Inventory
         </div>
 
-            <div class="scroll-box">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Item</th>
-                            <th>Date In</th>
-                            <th>Expiration</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="yoloBody"></tbody>
-                </table>
-            </div>
-
+        <div class="scroll-box">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item</th>
+                        <th>Date In</th>
+                        <th>Expiration</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="yoloBody"></tbody>
+            </table>
         </div>
-    </div>
 
+    </div>
 </div>
 
 <!-- ========================= -->
@@ -295,7 +294,7 @@ window.onload = function () {
     function onConnect() {
         console.log("Webpage connected to MQTT");
         client.subscribe("tempAlert");
-	client.subscribe("sensorAlert");
+        client.subscribe("sensorAlert");
     }
 
     function onConnectionLost(responseObject) {
@@ -315,6 +314,17 @@ window.onload = function () {
             alert("MQTT Message: " + message.payloadString);
         }
     }
+</script>
+
+<!-- ONLY ADDITION: date script -->
+<script>
+function setTodayDate() {
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    document.getElementById("todayDate").innerText =
+        new Date().toLocaleDateString(undefined, options);
+}
+
+window.addEventListener("load", setTodayDate);
 </script>
 
 </body>
