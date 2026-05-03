@@ -46,14 +46,13 @@ def publish(client, msg):
 app = Flask(__name__)
 
 CSV_PATH = "/home/mert/app_gui/inventory_data/yolo_temp.csv"
-GAS_PATH = "/home/mert/fridge_project/PPMData.csv" # Future place for gas sensors csv file
+GAS_PATH = "/home/mert/fridge_project/PPMData.csv"
+
+# ✅ CHANGED: single source-of-truth for the captured image path
+IMAGE_PATH = "./static/IMG/http_test_image.png"
 
 
 # ---------------- UI ROUTES ---------------- #
-
-#@app.route("/") # change this to be the default start later on
-#def root():
-#    return render_template("login.html")
 
 @app.route("/")
 def root():
@@ -62,13 +61,11 @@ def root():
 @app.route("/inventory")
 def inventory():
     return render_template("inventory.html")
-    
-    
+
 @app.route("/screen")
 def screen():
     return render_template("piScreen.html")
-    
-   
+
 
 # ---------------- LED ---------------- #
 
@@ -98,33 +95,49 @@ def cameraTrigger():
     ret, frame = cap.read()
 
     if ret:
-        cv2.imwrite('./static/IMG/http_test_image.png', frame)
+        cv2.imwrite(IMAGE_PATH, frame)  # ✅ CHANGED: uses shared IMAGE_PATH constant
 
     pixels.fill(OFF)
     pixels.show()
     cap.release()
 
 
+# ✅ CHANGED: kept for direct browser use / backward compat, but now uses IMAGE_PATH
 @app.route("/imageShow")
 def image_show():
-    return send_file('./static/IMG/http_test_image.png', mimetype='image/png')
+    return send_file(IMAGE_PATH, mimetype='image/png')
 
 
 @app.route('/api/capture-image')
 def capture_image():
     try:
         cameraTrigger()
-
         image_url = request.host_url + "static/IMG/http_test_image.png"
-
         return jsonify({
             "message": "Image captured successfully",
             "image_url": image_url
         }), 200
-
     except Exception as e:
         traceback.print_exc()
         return jsonify({"message": str(e)}), 500
+
+
+# ✅ NEW: polling endpoint used by the dashboard to get the latest captured image.
+#         The Python camera script writes to IMAGE_PATH independently; this route
+#         just serves whatever is on disk with proper Last-Modified headers so the
+#         frontend can detect when a new capture has arrived without re-downloading
+#         the same image every 3 seconds.
+@app.route('/api/latest-image')
+def latest_image():
+    if not os.path.exists(IMAGE_PATH):
+        return jsonify({"error": "No image captured yet"}), 404
+
+    return send_file(
+        IMAGE_PATH,
+        mimetype='image/png',
+        conditional=True   # ✅ Flask sets Last-Modified + honours If-Modified-Since
+    )
+
 
 # ---------------- CSV read in ---------------- #
 
@@ -135,11 +148,9 @@ def read_csv():
             return []
 
         df = pd.read_csv(CSV_PATH)
-
         print("CSV COLUMNS:", df.columns.tolist())
 
         expected_cols = ["Item", "Date In", "Expiration"]
-
         for col in expected_cols:
             if col not in df.columns:
                 df[col] = ""
@@ -165,16 +176,11 @@ def get_json():
     return jsonify({"data": read_csv()}), 200
 
 
-
-
-
-
 @app.route('/api/add-row', methods=['POST'])
 def add_row():
     try:
         data = request.get_json()
 
-        # ✅ FIXED: format is now %m-%d-%y to match MM-DD-YY
         date_in_str = data.get("Date In", "")
         if date_in_str and not data.get("Expected Expiration"):
             try:
@@ -203,17 +209,16 @@ def add_row():
         traceback.print_exc()
         return jsonify({"message": "error"}), 500
 
+
 @app.route('/api/update-row', methods=['POST'])
 def update_row():
     try:
         data = request.get_json()
 
         df = pd.read_csv(CSV_PATH)
-
         df.at[data["id"], "Item"] = data["Item"]
         df.at[data["id"], "Date In"] = data["Date In"]
         df.at[data["id"], "Expected Expiration"] = data["Expected Expiration"]
-
         df.to_csv(CSV_PATH, index=False)
 
         return jsonify({"message": "updated"}), 200
@@ -221,6 +226,7 @@ def update_row():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"message": "error"}), 500
+
 
 @app.route('/api/delete-row', methods=['POST'])
 def delete_row():
@@ -238,7 +244,6 @@ def delete_row():
         return jsonify({"message": "error"}), 500
 
 
-
 @app.route('/api/gas-data')
 def gas_data():
     try:
@@ -246,8 +251,6 @@ def gas_data():
             return jsonify({"error": "No data yet"}), 404
 
         df = pd.read_csv(GAS_PATH, header=None)
-
-        # ✅ Grab the last row (most recent reading)
         last = df.iloc[-1]
 
         return jsonify({
@@ -260,6 +263,7 @@ def gas_data():
     except Exception as e:
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
+
 
 # ---------------- Run flask server ---------------- #
 
