@@ -200,41 +200,17 @@
 
 </div>
 
+<!-- ========================= -->
+<!-- ORIGINAL JS (UNCHANGED) -->
+<!-- ========================= -->
 <script>
 
-// ── state ──────────────────────────────────────────────────────────────────
-let lastHash     = null;
-let pollInterval = null;
-let isEditing    = false;
+// LOAD TABLE
+async function loadJSON() {
+    const res = await fetch("/api/get-json");
+    const json = await res.json();
 
-// ── polling control ────────────────────────────────────────────────────────
-function startPolling() {
-    if (pollInterval) return;
-    pollInterval = setInterval(loadJSON, 3000);
-}
-
-function stopPolling() {
-    clearInterval(pollInterval);
-    pollInterval = null;
-}
-
-function beginEdit() {
-    isEditing = true;
-    stopPolling();
-}
-
-function endEdit() {
-    isEditing = false;
-    loadJSON().then(startPolling);
-}
-
-// ── helpers ────────────────────────────────────────────────────────────────
-function hashJSON(obj) {
-    return JSON.stringify(obj);
-}
-
-// ── render ─────────────────────────────────────────────────────────────────
-function renderTable(data) {
+    const data = json.data;
     const table = document.getElementById("yoloBody");
     table.innerHTML = "";
 
@@ -242,21 +218,18 @@ function renderTable(data) {
         const tr = document.createElement("tr");
 
         tr.innerHTML = `
-            <td contenteditable="true"
-                onfocus="beginEdit()"
-                onblur="updateRow(${row.id}, this).then(endEdit)">
+            <td contenteditable="true" onblur="updateRow(${row.id}, this)">
                 ${row.Item || ""}
             </td>
-            <td contenteditable="true"
-                onfocus="beginEdit()"
-                onblur="updateRow(${row.id}, this).then(endEdit)">
+
+            <td contenteditable="true" onblur="updateRow(${row.id}, this)">
                 ${row["Date In"] || ""}
             </td>
-            <td contenteditable="true"
-                onfocus="beginEdit()"
-                onblur="updateRow(${row.id}, this).then(endEdit)">
+
+            <td contenteditable="true" onblur="updateRow(${row.id}, this)">
                 ${row["Expiration"] || ""}
             </td>
+
             <td>
                 <button class="btn btn-danger" onclick="deleteRow(${row.id})">
                     Delete
@@ -268,78 +241,48 @@ function renderTable(data) {
     });
 }
 
-// ── load & diff ────────────────────────────────────────────────────────────
-async function loadJSON() {
-    const res  = await fetch("/api/get-json");
-    const json = await res.json();
-    const data = json.data;
-
-    const newHash = hashJSON(data);
-    if (newHash !== lastHash) {
-        lastHash = newHash;
-        renderTable(data);
-    }
-}
-
-// ── update row ─────────────────────────────────────────────────────────────
+// UPDATE ROW
 async function updateRow(id, cell) {
     const row = cell.parentElement;
-    const c   = row.children;
+    const c = row.children;
 
     await fetch("/api/update-row", {
-        method:  "POST",
+        method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
-            id:           id,
-            Item:         c[0].innerText.trim(),
-            "Date In":    c[1].innerText.trim(),
+            id: id,
+            Item: c[0].innerText.trim(),
+            "Date In": c[1].innerText.trim(),
             "Expiration": c[2].innerText.trim()
         })
     });
-
-    // Sync hash to reflect saved state so next poll is a no-op
-    const res  = await fetch("/api/get-json");
-    const json = await res.json();
-    lastHash   = hashJSON(json.data);
 }
 
-// ── add row ────────────────────────────────────────────────────────────────
+// ADD ROW
 async function addRow() {
     await fetch("/api/add-row", {
-        method:  "POST",
+        method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({
-            "Item":       document.getElementById("newItem").value,
-            "Date In":    document.getElementById("newDate").value,
+            "Item": document.getElementById("newItem").value,
+            "Date In": document.getElementById("newDate").value,
             "Expiration": document.getElementById("newExp").value
         })
     });
 
     document.getElementById("newItem").value = "";
     document.getElementById("newDate").value = "";
-    document.getElementById("newExp").value  = "";
+    document.getElementById("newExp").value = "";
 
-    lastHash = null;
-    await loadJSON();
+    loadJSON();
 }
 
-// ── delete row ─────────────────────────────────────────────────────────────
-async function deleteRow(id) {
-    if (!confirm("Are you sure you want to delete this row?")) return;
 
-    await fetch("/api/delete-row", {
-        method:  "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ id })
-    });
 
-    lastHash = null;
-    await loadJSON();
-}
 
-// ── date helpers (unchanged) ───────────────────────────────────────────────
 function normalizeDate(dateStr) {
     if (!dateStr) return "";
+    // Convert slashes to dashes
     return dateStr.replace(/\//g, "-");
 }
 
@@ -355,21 +298,42 @@ function autoFillExpiration(dateStr) {
     if (parts.length !== 3) return;
     const [mm, dd, yy] = parts;
 
-    // Guard: all three parts must be non-empty numbers
-    if (!mm || !dd || !yy) return;
-    const mmInt = parseInt(mm, 10);
-    const ddInt = parseInt(dd, 10);
-    const yyInt = parseInt(yy, 10);
-    if (isNaN(mmInt) || isNaN(ddInt) || isNaN(yyInt)) return;
+    console.log("DEBUG parts:", mm, dd, yy); // ✅ check this in browser console
 
-    const fullYear = yyInt < 100 ? 2000 + yyInt : yyInt;
-    const d = new Date(fullYear, mmInt - 1, ddInt);
+    const fullYear = parseInt(yy) < 100 ? 2000 + parseInt(yy) : parseInt(yy);
+    const d = new Date(fullYear, parseInt(mm) - 1, parseInt(dd));
 
     if (isNaN(d.getTime())) return;
 
-// ── init ───────────────────────────────────────────────────────────────────
+    d.setDate(d.getDate() + 5);
+
+    const omm = String(d.getMonth() + 1).padStart(2, '0');
+    const odd = String(d.getDate()).padStart(2, '0');
+    const oyy = String(d.getFullYear()).slice(-2);
+
+    console.log("DEBUG result:", omm, odd, oyy); // ✅ check this too
+
+    expField.value = `${omm}-${odd}-${oyy}`;
+}
+
+// DELETE ROW
+async function deleteRow(id) {
+    const confirmDelete = confirm("Are you sure you want to delete this row?");
+    if (!confirmDelete) return;
+
+    await fetch("/api/delete-row", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ id: id })
+    });
+
+    loadJSON();
+}
+
+// INIT
 window.onload = function () {
-    loadJSON().then(startPolling);
+    loadJSON();
+    setInterval(loadJSON, 7000);
 };
 
 </script>
@@ -398,7 +362,7 @@ window.onload = function () {
     function onConnect() {
         console.log("Webpage connected to MQTT");
         client.subscribe("tempAlert");
-        client.subscribe("sensorAlert");
+	client.subscribe("sensorAlert");
     }
 
     function onConnectionLost(responseObject) {
